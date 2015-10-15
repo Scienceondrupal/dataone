@@ -1,5 +1,11 @@
-# dataone
+# DataONE
 A Drupal module that provides a stub for implementing the DataONE Member Node API.
+
+- benefits: https://www.dataone.org/benefits-becoming-member-node  
+- requirements: https://www.dataone.org/member_node_requirements  
+- process: https://www.dataone.org/member-node-deployment-process   
+
+## Progress
 
 **Status: Discovery**
 
