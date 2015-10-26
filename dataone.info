@@ -1,0 +1,6 @@
+name = DataONE Member Node API
+description = Set up a Drupal site as a DataONE Member Node.
+core = 7.x
+package = DataONE
+version = 7.x-1.0
+project = dataone

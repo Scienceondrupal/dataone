@@ -1,0 +1,43 @@
+<?php
+
+/**
+ * @file
+ * dataone.module
+ */
+
+define('DATAONE_PERMISSION_ADMINISER_CONFIG', 'administer dataone configuration');
+/**
+ * Implements hook_menu().
+ */
+function dataone_menu() {
+  $items['admin/config/dataone'] = array(
+    'title' => 'DataONE Member Node',
+    'description' => 'Settings for configuring a DataONE Member Node',
+    'page callback' => 'system_admin_menu_block_page',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+  );
+  $items['admin/config/dataone/settings'] = array(
+    'title' => 'DataONE Settings',
+    'description' => 'Configure a DataONE Member Node.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('dataone_admin_settings'),
+    'access arguments' => array(DATAONE_PERMISSION_ADMINISER_CONFIG),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'dataone.admin.inc',
+  );
+}
+
+function dataone_permissions() {
+  $permissions = array();
+
+  // Exported permission: 'create dataset_mapserver_configuration content'.
+  $permissions[DATAONE_PERMISSION_ADMINISER_CONFIG] = array(
+    'name' => 'Administer DataONE Configuration',
+    'roles' => array(),
+    'module' => 'dataone',
+  );
+
+  return $permissions;
+}
