@@ -11,9 +11,9 @@ define('DATAONE_VARIABLE_API_VERSIONS', 'dataone_mn_api_versions');
 define('DATAONE_VARIABLE_API_STATUS', 'dataone_mn_api_online_');
 define('DATAONE_VARIABLE_API_ENDPOINT', 'dataone_mn_api_endpoint_paths_');
 define('DATAONE_VARIABLE_API_MAX_LOG_COUNT', 'dataone_mn_api_log_count_');
+define('DATAONE_DEFAULT_MAX_LOG_RECORDS', '50');
 define('DATONE_URL_NODE_REGISTRATION', 'https://releases.dataone.org/online/api-documentation-v1.2.0/design/NodeIdentity.html#node-registration');
-define('DATAONE_URL_EXCEPTION_NOT_IMPLEMENTED', 'https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotImplemented');
-define('DATAONE_URL_EXCEPTION_SERVICE_FAILURE', 'https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.ServiceFailure');
+
 /**
  * Implements hook_menu().
  */
@@ -35,12 +35,22 @@ function dataone_menu() {
     'type' => MENU_NORMAL_ITEM,
     'file' => 'dataone.admin.inc',
   );
+
+
+  // Publish version-specific menu paths.
+  $versions = variable_get(DATAONE_VARIABLE_API_VERSIONS, array());
+  foreach ($versions as $version_id) {
+
+  }
+
+  return $items;
 }
 
+/**
+ * Implements hook_permissions().
+ */
 function dataone_permissions() {
-  $permissions = array();
 
-  // Exported permission: 'create dataset_mapserver_configuration content'.
   $permissions[DATAONE_PERMISSION_ADMINISER_CONFIG] = array(
     'name' => 'Administer DataONE Configuration',
     'roles' => array(),
@@ -48,4 +58,22 @@ function dataone_permissions() {
   );
 
   return $permissions;
+}
+
+/**
+ * Get the possible Member Node API versions.
+ *
+ * @return array
+ *   Associative array of possible values for this Member Node's API versions.
+ */
+function _dataone_api_version_options() {
+  $options = &drupal_static(__FUNCTION__);
+  if (empty($options)) {
+    $options = array(
+      'v1' => t('Version 1'),
+      'v2' => t('Version 2'),
+    );
+  }
+
+  return $options;
 }
