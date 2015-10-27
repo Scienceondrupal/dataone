@@ -18,7 +18,7 @@ define('DATONE_URL_NODE_REGISTRATION', 'https://releases.dataone.org/online/api-
  * Implements hook_menu().
  */
 function dataone_menu() {
-  $items['admin/config/dataone'] = array(
+  $items['admin/config/services/dataone'] = array(
     'title' => 'DataONE Member Node',
     'description' => 'Settings for configuring a DataONE Member Node',
     'page callback' => 'system_admin_menu_block_page',
@@ -26,7 +26,7 @@ function dataone_menu() {
     'file' => 'system.admin.inc',
     'file path' => drupal_get_path('module', 'system'),
   );
-  $items['admin/config/dataone/settings'] = array(
+  $items['admin/config/services/dataone/settings'] = array(
     'title' => 'DataONE Settings',
     'description' => 'Configure a DataONE Member Node.',
     'page callback' => 'drupal_get_form',
