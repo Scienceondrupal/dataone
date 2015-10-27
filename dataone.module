@@ -10,7 +10,7 @@ define('DATAONE_VARIABLE_MEMBER_NODE_IDENTIFIER', 'dataone_mn_identifier');
 define('DATAONE_VARIABLE_API_VERSIONS', 'dataone_mn_api_versions');
 define('DATAONE_VARIABLE_API_STATUS', 'dataone_mn_api_online_');
 define('DATAONE_VARIABLE_API_ENDPOINT', 'dataone_mn_api_endpoint_paths_');
-define('DATAONE_VARIABLE_API_LOG_COUNT', 'dataone_mn_api_log_count_');
+define('DATAONE_VARIABLE_API_MAX_LOG_COUNT', 'dataone_mn_api_log_count_');
 define('DATONE_URL_NODE_REGISTRATION', 'https://releases.dataone.org/online/api-documentation-v1.2.0/design/NodeIdentity.html#node-registration');
 define('DATAONE_URL_EXCEPTION_NOT_IMPLEMENTED', 'https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotImplemented');
 define('DATAONE_URL_EXCEPTION_SERVICE_FAILURE', 'https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.ServiceFailure');
