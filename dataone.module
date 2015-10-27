@@ -5,7 +5,7 @@
  * dataone.module
  */
 
-define('DATAONE_PERMISSION_ADMINISER_CONFIG', 'administer dataone configuration');
+define('DATAONE_PERMISSION_ADMINISTER_CONFIG', 'administer dataone configuration');
 define('DATAONE_VARIABLE_MEMBER_NODE_IDENTIFIER', 'dataone_mn_identifier');
 define('DATAONE_VARIABLE_API_VERSIONS', 'dataone_mn_api_versions');
 define('DATAONE_VARIABLE_API_STATUS', 'dataone_mn_api_online_');
@@ -22,7 +22,7 @@ function dataone_menu() {
     'title' => 'DataONE Member Node',
     'description' => 'Settings for configuring a DataONE Member Node',
     'page callback' => 'system_admin_menu_block_page',
-    'access arguments' => array(DATAONE_PERMISSION_ADMINISER_CONFIG),
+    'access arguments' => array(DATAONE_PERMISSION_ADMINISTER_CONFIG),
     'file' => 'system.admin.inc',
     'file path' => drupal_get_path('module', 'system'),
   );
@@ -31,7 +31,7 @@ function dataone_menu() {
     'description' => 'Configure a DataONE Member Node.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('dataone_admin_settings'),
-    'access arguments' => array(DATAONE_PERMISSION_ADMINISER_CONFIG),
+    'access arguments' => array(DATAONE_PERMISSION_ADMINISTER_CONFIG),
     'type' => MENU_NORMAL_ITEM,
     'file' => 'dataone.admin.inc',
   );
@@ -47,17 +47,17 @@ function dataone_menu() {
 }
 
 /**
- * Implements hook_permissions().
+ * Implements hook_permission().
  */
-function dataone_permissions() {
+function dataone_permission() {
 
-  $permissions[DATAONE_PERMISSION_ADMINISER_CONFIG] = array(
-    'name' => 'Administer DataONE Configuration',
-    'roles' => array(),
-    'module' => 'dataone',
+  return array(
+    DATAONE_PERMISSION_ADMINISTER_CONFIG => array(
+      'title' => t('Administer DataONE Configuration'),
+      'description' => t(''),
+      'restrict access' => TRUE,
+    ),
   );
-
-  return $permissions;
 }
 
 /**
