@@ -6,6 +6,14 @@
  */
 
 define('DATAONE_PERMISSION_ADMINISER_CONFIG', 'administer dataone configuration');
+define('DATAONE_VARIABLE_MEMBER_NODE_IDENTIFIER', 'dataone_mn_identifier');
+define('DATAONE_VARIABLE_API_VERSIONS', 'dataone_mn_api_versions');
+define('DATAONE_VARIABLE_API_STATUS', 'dataone_mn_api_online_');
+define('DATAONE_VARIABLE_API_ENDPOINT', 'dataone_mn_api_endpoint_paths_');
+define('DATAONE_VARIABLE_API_LOG_COUNT', 'dataone_mn_api_log_count_');
+define('DATONE_URL_NODE_REGISTRATION', 'https://releases.dataone.org/online/api-documentation-v1.2.0/design/NodeIdentity.html#node-registration');
+define('DATAONE_URL_EXCEPTION_NOT_IMPLEMENTED', 'https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotImplemented');
+define('DATAONE_URL_EXCEPTION_SERVICE_FAILURE', 'https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.ServiceFailure');
 /**
  * Implements hook_menu().
  */
@@ -14,7 +22,7 @@ function dataone_menu() {
     'title' => 'DataONE Member Node',
     'description' => 'Settings for configuring a DataONE Member Node',
     'page callback' => 'system_admin_menu_block_page',
-    'access arguments' => array('administer site configuration'),
+    'access arguments' => array(DATAONE_PERMISSION_ADMINISER_CONFIG),
     'file' => 'system.admin.inc',
     'file path' => drupal_get_path('module', 'system'),
   );
