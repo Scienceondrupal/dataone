@@ -172,11 +172,9 @@ class DataOneApiVersionOne extends DataOneApi {
     $full_path = current_path();
     $endpoint_path = _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_ENDPOINT);
     $api_path = substr($full_path, strlen($endpoint_path));
-    dpm($api_path, 'API path');
 
     // Figure out which function to call.
     $path_info = DataOneApiVersionOne::getPathInformation($api_path);
-    dpm($path_info, $api_path);
     $function = $path_info['function'];
 
     // Call the function.

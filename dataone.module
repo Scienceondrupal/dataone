@@ -119,7 +119,6 @@ function dataone_menu() {
       }
     }
   }
-  dpm($items);
   return $items;
 }
 
