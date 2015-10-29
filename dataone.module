@@ -184,10 +184,6 @@ function dataone_api_access($version) {
   return $class::accessControl($args);
 }
 
-function _dataone_api_is_live($status) {
-
-}
-
 /**
  * Get the API implementing class for a specific version of the DataONE API.
  *

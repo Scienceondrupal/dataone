@@ -151,12 +151,9 @@ class DataOneApiVersionOne extends DataOneApi {
    * @return BOOL
    */
   static public function accessControl($args) {
-
-    // X.509 certificate information.
-    $session = DataOneApi::getSession();
-
-    // Check access control...
-
+    // Ver. 1 handles access control with Exception handling
+    // with specific detail codes based on the requested service.
+    // Return TRUE to allow the service to specify access control.
     return TRUE;
   }
 
@@ -195,14 +192,24 @@ class DataOneApiVersionOne extends DataOneApi {
    * Possible exceptions:
    *
    * Not Implemented
+   *   Ping is a required operation and so an operational member node should
+   *   never return this exception unless under development.
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotImplemented
-   * @example DataOneApiVersionOne::throwNotImplemented(2041, 'In development');
+   * @example DataOneApiVersionOne::throwNotImplemented(2041, 'The API implementation is in development');
    *
    * Service Failure
+   *   A ServiceFailure exception indicates that the node is not currently
+   *   operational as a member node. A coordinating node or monitoring service
+   *   may use this as an indication that the member node should be taken out of
+   *   the pool of active nodes, though ping should be called on a regular basis
+   *   to determine when the node might b ready to resume normal operations.
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.ServiceFailure
-   * @example DataOneApiVersionOne::throwServiceFailure(2042, 'Failed');
+   * @example DataOneApiVersionOne::throwServiceFailure(2042, 'Offline');
    *
    * Insufficient Resources
+   *    A ping response may return InsufficientResources if for example the
+   *    system is in a state where normal DataONE operations may be impeded
+   *    by an unusually high load on the node.
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.InsufficientResources
    * @example DataOneApiVersionOne::throwInsufficientResources(2045, 'Overloaded');
    */
@@ -221,12 +228,12 @@ class DataOneApiVersionOne extends DataOneApi {
           break;
 
         case DATAONE_API_STATUS_DEVELOPMENT:
-          DataOneApiVersionOne::throwNotImplemented(2041, 'In development');
+          DataOneApiVersionOne::throwNotImplemented(2041, 'The API implementation is in development');
           break;
 
         case DATAONE_API_STATUS_OFF:
         default:
-          DataOneApiVersionOne::throwNotImplemented(2041, 'The API is unavailable at this time.');
+          DataOneApiVersionOne::throwServiceFailure(2042, 'The API has been turned offline. Please try again later.');
       }
 
     }

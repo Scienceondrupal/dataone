@@ -29,7 +29,7 @@ abstract class DataOneApi {
    * @return BOOL
    */
   static public function accessControl($args) {
-    return FALSE;
+    return TRUE;
   }
 
   /**
