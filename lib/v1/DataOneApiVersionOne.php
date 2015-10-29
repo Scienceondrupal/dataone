@@ -213,7 +213,7 @@ class DataOneApiVersionOne extends DataOneApi {
     try {
 
       // Is the API live?
-      $status = _dataone_get_variable_name($version, DATAONE_VARIABLE_API_STATUS);
+      $status = _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_STATUS);
       switch ($status) {
         case DATAONE_API_STATUS_PRODUCTION:
           // Valid API body is the empty string.
@@ -236,7 +236,7 @@ class DataOneApiVersionOne extends DataOneApi {
     }
 
     // Send the response. The API says no body on successul, valid ping().
-    DataOneApiVersionOne::sendResponse($response);
+    DataOneApiVersionOne::sendResponse($response, 'text/plain');
   }
 
   /**
@@ -413,13 +413,17 @@ class DataOneApiVersionOne extends DataOneApi {
   /**
    * Generate DataONE API response.
    *
-   * @param DOMDocument $response
-   *   The XML to send the client
+   * @param mixed $response
+   *   The DOMDocument or string to send the client
+   *
+   * @param string $content_type
+   *   The content type header value.
+   *   Most all services of API ver. 1 are XML
    */
-  static public function sendResponse($response) {
+  static public function sendResponse($response, $content_type = 'application/xml') {
 
-    // Set the Content-Type, API ver. 1 defines it to always be XML.
-    drupal_add_http_header('Content-Type', 'application/xml');
+    // Set the Content-Type.
+    drupal_add_http_header('Content-Type', $content_type);
 
     // Send the XML.
     if ($response instanceof DOMDocument) {
