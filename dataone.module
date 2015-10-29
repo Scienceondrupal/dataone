@@ -11,10 +11,18 @@ define('DATAONE_VARIABLE_API_VERSIONS', 'dataone_mn_api_versions');
 define('DATAONE_VARIABLE_API_STATUS', 'dataone_mn_api_online_');
 define('DATAONE_VARIABLE_API_ENDPOINT', 'dataone_mn_api_endpoint_paths_');
 define('DATAONE_VARIABLE_API_MAX_LOG_COUNT', 'dataone_mn_api_log_count_');
+define('DATAONE_VARIABLE_API_MAX_OBJECT_COUNT', 'dataone_mn_api_object_count_');
 define('DATAONE_DEFAULT_MAX_LOG_RECORDS', '50');
+define('DATAONE_DEFAULT_MAX_OBJECT_RECORDS', '50');
 define('DATAONE_CN_STAGING_ENDPOINT', '');
 define('DATAONE_CN_PRODUCTION_ENDPOINT', '');
 define('DATONE_URL_NODE_REGISTRATION', 'https://releases.dataone.org/online/api-documentation-v1.2.0/design/NodeIdentity.html#node-registration');
+define('DATAONE_API_VERSION_1', 'v1');
+define('DATAONE_API_VERSION_2', 'v2');
+define('DATAONE_API_STATUS_PRODUCTION', 'production');
+define('DATAONE_API_STATUS_DEVELOPMENT', 'development');
+define('DATAONE_API_STATUS_OFF', 'off');
+
 
 /**
  * Implements hook_menu().
@@ -39,11 +47,79 @@ function dataone_menu() {
   );
 
   // Publish version-specific menu paths.
-  $versions = variable_get(DATAONE_VARIABLE_API_VERSIONS, array());
-  foreach ($versions as $version_id) {
+  $versions = _dataone_api_versions();
+  $implemented_versions = array_filter(array_values(variable_get(DATAONE_VARIABLE_API_VERSIONS, array())));
 
+  // Add menu paths for the APIs.
+  foreach ($implemented_versions as $version_id) {
+
+    // Get the Class implementation.
+    $class = _dataone_api_version_class_name($version_id);
+    if (!$class) {
+      drupal_set_message(t('Could not find implementation class for version: @ver', array('@ver' => $version_id)), 'error');
+      continue;
+    }
+
+    // Get the menu paths.
+    $paths = $class::getApiMenuPaths();
+    if (empty($paths)) {
+      drupal_set_message(t('No defined menu paths for version: @ver in @class', array('@ver' => $version_id, '@class' => $class)), 'error');
+      continue;
+    }
+
+    // The API endpoint path for this version.
+    $endpoint = _dataone_get_variable($version_id, DATAONE_VARIABLE_API_ENDPOINT);
+    // Figure out how many parts are in the endpoint path.
+    // This info will be used for defining where page arguments are located.
+    $endpoint_parts = count(explode('/', $endpoint));
+
+    // Iterate through the path definitions.
+    foreach ($paths as $title => $path_info) {
+      // Iterate through all the paths for a certain API method.
+      foreach ($path_info['paths'] as $path) {
+
+        // The Drupal menu path.
+        $api_path = $endpoint . $path;
+
+        // Add menu item.
+        $items[$api_path] = array(
+          'type' => MENU_CALLBACK,
+          'title' => $version_id . ' ' . $title,
+          'file' => 'includes/' . $version_id . '.inc',
+          'page callback' => '_dataone_api_v1_request',
+        );
+
+        // Page arguments.
+        // Arguments in the menu path.
+        $path_arguments = !empty($path_info['arguments']) ? $path_info['arguments'] : FALSE;
+        if ($path_arguments) {
+          $arguments = array();
+          foreach ($path_arguments as $relative_menu_path_index => $arg_info) {
+            // Add the count of endpoint path parts to the defined index.
+            $arguments[] = $endpoint_parts + $relative_menu_path_index;
+          }
+          if (!empty($arguments)) {
+            $items[$api_path]['page arguments'] = $arguments;
+          }
+        }
+
+        // Access control.
+        if (!empty($path_info['access callback'])) {
+          $items[$api_path]['access callback'] = $path_info['access callback'];
+        }
+        if (!empty($path_info['access arguments'])) {
+          $args = array();
+          foreach ($path_info['access arguments'] as $index => $arg) {
+            // Is the argument a positive integer represnting a menu path part?
+            // If so, add the count of endpoint path parts to the defined index.
+            $args[] = (is_numeric($arg) && 0 <= $arg) ? $endpoint_parts + $arg : $arg;
+          }
+          $items[$api_path]['access arguments'] = $args;
+        }
+      }
+    }
   }
-
+  dpm($items);
   return $items;
 }
 
@@ -67,14 +143,98 @@ function dataone_permission() {
  * @return array
  *   Associative array of possible values for this Member Node's API versions.
  */
-function _dataone_api_version_options() {
+function _dataone_api_versions() {
   $options = &drupal_static(__FUNCTION__);
   if (empty($options)) {
     $options = array(
-      'v1' => t('Version 1'),
-      'v2' => t('Version 2'),
+      DATAONE_API_VERSION_1 => array(
+        'name' => t('Version 1'),
+        'class' => 'DataOneApiVersionOne',
+      ),
+      DATAONE_API_VERSION_2 => array(
+        'name' => t('Version 2'),
+        'class' => 'DataOneApiVersionTwo',
+      ),
     );
+
+    // Allow implementing modules to define their API class implementations.
+    drupal_alter('dataone_api_versions', $options);
   }
 
   return $options;
+}
+
+/**
+ * Check access control.
+ *
+ * @param string $version
+ *   The version of the DataONE API
+ *
+ * @return BOOL
+ *   Either TRUE or FALSE
+ */
+function dataone_api_access($version) {
+  // Get the requested arguments.
+  $args = func_get_args();
+  // Remove the version.
+  $args = array_shift($args);
+
+  // Figure out which class to call.
+  $class = _dataone_api_version_class_name($version);
+
+  return $class::accessControl($args);
+}
+
+function _dataone_api_is_live($status) {
+
+}
+
+/**
+ * Get the API implementing class for a specific version of the DataONE API.
+ *
+ * @param string $version
+ *   The version of the DataONE API
+ *
+ * @return string
+ *   The name of the class
+ */
+function _dataone_api_version_class_name($version) {
+  $versions = _dataone_api_versions();
+  return !empty($versions[$version]['class']) ? $versions[$version]['class'] : FALSE;
+}
+
+/**
+ * Get a variable for a DataONE API version.
+ *
+ * @param string $version
+ *   The version of the DataONE API
+ *
+ * @param string $variable
+ *   The variable prefix to lookup
+ *
+ * @param mixed $default_value
+ *   The variable_get() default value
+ *
+ * @return mixed
+ *   the result of variable_get()
+ */
+function _dataone_get_variable($version, $variable, $default_value = FALSE) {
+  $var = _dataone_get_variable_name($version, $variable);
+  return variable_get($var, $default_value);
+}
+
+/**
+ * Get a variable for a DataONE API version.
+ *
+ * @param string $version
+ *   The version of the DataONE API
+ *
+ * @param string $variable
+ *   The variable prefix to lookup
+ *
+ * @return string
+ *   the variable name
+ */
+function _dataone_get_variable_name($version, $variable) {
+  return $variable . $version;
 }
