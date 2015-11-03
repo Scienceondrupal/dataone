@@ -89,7 +89,28 @@ class DataOneApiVersionOneException extends DataOneApiException {
   }
 
   /**
+   * Convert the trace information into a string.
    *
+   * @param string $element_delimeter
+   *   The delimeter between the key and value of atrace info array element
+   *
+   * @param string $delimeter
+   *   The delimeter between each element in the trace info array
+   *
+   * @param string $element_prefix
+   *   A string to printed before a trace element's key is printed
+   *
+   * @param string $element_suffix
+   *   A string to append after a trace element's value is printed
+   *
+   * @param string $prefix
+   *   A string printed before everything else
+   *
+   * @param string $suffix
+   *   A string printed after everything else
+   *
+   * @param mixed $no_results
+   *   The returned value if there is no trace information
    */
   public function generateTraceInformation($element_delimeter = ": ", $delimeter = "\n", $element_prefix = "", $element_suffix = "", $prefix = "", $suffix = "", $no_results = FALSE) {
     if (!$this->hasTraceInformation()) {
@@ -110,43 +131,51 @@ class DataOneApiVersionOneException extends DataOneApiException {
 
   /**
    * Generate a DataONE MN API 1 Error response.
+   *
+   * @return string
+   *   The XML
    */
   public function generateErrorResponse() {
 
     $error_code = $this->getErrorCode();
     drupal_add_http_header('Status', $error_code);
 
+    /*
     $dom = new DOMDocument('1.0', 'UTF-8');
     $dom->formatOutput = true;
     $error = $dom->createElement('error');
     $dom->appendChild($error);
 
-    $attr = $dom->createAttribute('name');
-    $attr->value = $this->getErrorName();
-    $error->appendChild($attr);
-
-    $attr = $dom->createAttribute('errorCode');
-    $attr->value = $error_code;
-    $error->appendChild($attr);
-
-    $attr = $dom->createAttribute('detailCode');
-    $attr->value = $this->getDetailCode();
-    $error->appendChild($attr);
-
-    $description = $dom->createElement('description');
-    $desc_text = $dom->createTextNode($this->getDescription());
-    $description->appendChild($desc_text);
-    $error->appendChild($description);
+    DataOneApiVersionOne::addDOMNodeAttribute($dom, $error, 'name', $this->getErrorName());
+    DataOneApiVersionOne::addDOMNodeAttribute($dom, $error, 'errorCode', $error_code);
+    DataOneApiVersionOne::addDOMNodeAttribute($dom, $error, 'detailCode', $this->getDetailCode());
+    DataOneApiVersionOne::addTextToDOMNode($dom, $error, 'description', $this->getDescription());
 
     $trace_info_value = $this->generateTraceInformation();
     if ($trace_info_value) {
-      $trace_info = $dom->createElement('traceInformation');
-      $trace_info_text = $dom->createTextNode($trace_info_value);
-      $trace_info->appendChild($trace_info_text);
-      $error->appendChild($trace_info);
+      DataOneApiVersionOne::addTextToDOMNode($dom, $error, 'traceInformation', $trace_info_value);
+    }
+    return $dom->saveXML();
+    */
+
+    $xml = DataOneApiXml::generateXmlWriter();
+    $elements = array(
+      'error' => array(
+        '_attrs' => array(
+          'name' => $this->getErrorName(),
+          'errorCode' => $error_code,
+          'detailCode' => $this->getDetailCode(),
+        ),
+        'description' => $this->getDescription(),
+      ),
+    );
+    $trace_info_value = $this->generateTraceInformation();
+    if ($trace_info_value) {
+      $elements['error']['traceInformation'] = $trace_info_value;
     }
 
-    return $dom;
+    DataOneApiXml::addXmlWriterElements($xml, $elements);
+    return DataOneApiXml::printXmlWriter($xml);
   }
 
   // Custom string representation of object.

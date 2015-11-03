@@ -8,5 +8,6 @@ configure = admin/config/dataone/settings
 files[] = lib/DataOneApi.php
 files[] = lib/DataOneApiException.php
 files[] = lib/v1/DataOneApiVersionOne.php
+files[] = lib/writers/DataOneApiXML.php
 files[] = lib/v1/DataOneApiVersionOneException.php
 files[] = lib/v2/DataOneApiVersionTwo.php
