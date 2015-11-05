@@ -43,21 +43,4 @@ abstract class DataOneApi {
   public function requestHandler($args) {
     watchdog('dataone', 'call to requestHandler() should be made by an implementing class', array(), WATCHDOG_ERROR);
   }
-
-    /**
-   * Generate DataONE API response.
-   *
-   * @param string $response
-   *   The string to send the client
-   *
-   * @param mixed $error_code
-   *   The ServiceFailure exception detail code for the calling function
-   *
-   * @param string $content_type
-   *   The content type header value.
-   *   Most all services of API ver. 1 are XML
-   */
-  static public function sendResponse($response, $error_code = FALSE, $content_type = 'application/xml') {
-    watchdog('dataone', 'call to sendResponse() should be made by an implementing class', array(), WATCHDOG_ERROR);
-  }
 }

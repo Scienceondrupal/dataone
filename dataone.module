@@ -38,6 +38,28 @@ define('DATAONE_API_FALSE_STRING', 'false');
 define('DATAONE_API_STATUS_PRODUCTION', 'production');
 define('DATAONE_API_STATUS_DEVELOPMENT', 'development');
 define('DATAONE_API_STATUS_OFF', 'off');
+define('DATAONE_API_DATE_FORMAT', 'D, d M Y H:i:s T');
+
+/**
+ * Generic path loader.
+ *
+ * @param string $path_argument
+ *   The part of the request path to pass to a loader function
+ *
+ * @param string $version_id
+ *   The version of the DataONE API
+ *
+ * @param string $loader_function
+ *   Loader function in the DataONE API class defined in _dataone_api_versions()
+ *
+ * @return mixed
+ *   Whatever is relevant to the loader
+ */
+function dataone_load($path_argument, $version_id, $loader_function) {
+  // Figure out which class to call.
+  $class = _dataone_api_version_class_name($version_id);
+  return $class::$loader_function($path_argument);
+}
 
 /**
  * Implements hook_menu().
@@ -99,23 +121,27 @@ function dataone_menu() {
         // Add menu item.
         $items[$api_path] = array(
           'type' => MENU_CALLBACK,
-          'title' => $version_id . ' ' . $title,
+          // Setting 'title' => $title is important.
+          // It provides a key from menu_get_item() into getApiMenuPaths().
+          'title' => $title,
           'file' => 'includes/' . $version_id . '.inc',
           'page callback' => '_dataone_api_v1_request',
         );
 
         // Page arguments.
         // Arguments in the menu path.
-        $path_arguments = !empty($path_info['arguments']) ? $path_info['arguments'] : FALSE;
-        if ($path_arguments) {
+        if (!empty($path_info['arguments'])) {
           $arguments = array();
-          foreach ($path_arguments as $relative_menu_path_index => $arg_info) {
+          foreach ($path_info['arguments'] as $relative_menu_path_index => $arg_info) {
             // Add the count of endpoint path parts to the defined index.
             $arguments[] = $endpoint_parts + $relative_menu_path_index;
           }
           if (!empty($arguments)) {
             $items[$api_path]['page arguments'] = $arguments;
           }
+        }
+        if (!empty($path_info['load arguments'])) {
+          $items[$api_path]['load arguments'] = $path_info['load arguments'];
         }
 
         // Access control.
@@ -229,8 +255,14 @@ function _dataone_api_version_class_name($version) {
  *   the result of variable_get()
  */
 function _dataone_get_variable($version, $variable, $default_value = FALSE) {
-  $var = _dataone_get_variable_name($version, $variable);
-  return variable_get($var, $default_value);
+  $vars = &drupal_static(__FUNCTION__, array());
+  //Get the variable name to lookup.
+  $var_name = _dataone_get_variable_name($version, $variable);
+  //Lookup the variable.
+  if (!isset($vars[$var_name])) {
+    $vars[$var_name] = variable_get($var_name, $default_value);
+  }
+  return $vars[$var_name];
 }
 
 /**

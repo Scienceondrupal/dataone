@@ -140,24 +140,6 @@ class DataOneApiVersionOneException extends DataOneApiException {
     $error_code = $this->getErrorCode();
     drupal_add_http_header('Status', $error_code);
 
-    /*
-    $dom = new DOMDocument('1.0', 'UTF-8');
-    $dom->formatOutput = true;
-    $error = $dom->createElement('error');
-    $dom->appendChild($error);
-
-    DataOneApiVersionOne::addDOMNodeAttribute($dom, $error, 'name', $this->getErrorName());
-    DataOneApiVersionOne::addDOMNodeAttribute($dom, $error, 'errorCode', $error_code);
-    DataOneApiVersionOne::addDOMNodeAttribute($dom, $error, 'detailCode', $this->getDetailCode());
-    DataOneApiVersionOne::addTextToDOMNode($dom, $error, 'description', $this->getDescription());
-
-    $trace_info_value = $this->generateTraceInformation();
-    if ($trace_info_value) {
-      DataOneApiVersionOne::addTextToDOMNode($dom, $error, 'traceInformation', $trace_info_value);
-    }
-    return $dom->saveXML();
-    */
-
     $xml = DataOneApiXml::generateXmlWriter();
     $elements = array(
       'error' => array(

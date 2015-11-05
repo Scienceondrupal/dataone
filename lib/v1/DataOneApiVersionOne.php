@@ -6,18 +6,26 @@
  *
  * FUNCTIONS TO OVERRIDE:
  *
- * getPid()
+ * loadPid()
  * checkSession()
  * ping()
  * getLogRecords()
  * getCapabilities()
- * get()
+ * get($pid)
  * getSystemMetadata()
- * describe()
+ * describe($pid)
  * getChecksum()
  * listObjects()
  * synchronizationFailed()
  * getReplica()
+ * getLastModifiedDateForPid($pid)
+ * getByteSizeForPid($pid)
+ * getFormatIdForPid($pid)
+ * getChecksumForPid($pid)
+ * getChecksumAlgorithmForPid($pid)
+ * getSerialVersionForPid($pid)
+ * getObjectForStreaming($pid)
+ * getLogRecordDataForParameters($start, $max_count, $from_date, $to_date, $event, $pid_filter)
  */
 
 class DataOneApiVersionOne extends DataOneApi {
@@ -36,9 +44,176 @@ class DataOneApiVersionOne extends DataOneApi {
    * @param mixed
    *   Either FALSE or a structure like a node or entity or array.
    */
-  static public function getPid($pid) {
-    watchdog('dataone', 'call to getPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
-    return FALSE;
+  static public function loadPid($pid) {
+    watchdog('dataone', 'call to loadPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    return $pid;
+  }
+
+  /**
+   * Get the file path or uri for streaming an object in a response.
+   * @see readfile()
+   *
+   * This function should be public so that it can be called by the menu loader.
+   * This function is static so that it can be called by
+   * dataone_api_v1_pid_load().
+   * @see dataone_api_v1_pid_load
+   *
+   * @param string $pid
+   *   The PID from the request.
+   *
+   * @param mixed
+   *   Either FALSE or a structure like a node or entity or array.
+   */
+  public function getObjectForStreaming($pid) {
+    global $base_url;
+    watchdog('dataone', 'call to getObjectForStreaming(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    return $base_url;
+  }
+
+  /**
+   * Get the last modified date of the object identified by the given PID.
+   * @see format_date()
+   *
+   * @param string $pid
+   *   The PID of the object.
+   *
+   * @param integer
+   *   The timestamp to be passed to format_date()
+   */
+  public function getLastModifiedDateForPid($pid) {
+    watchdog('dataone', 'call to getLastModifiedDateForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    return time();
+  }
+
+  /**
+   * Get the size in bytes of the object identified by the given PID.
+   *
+   * @param string $pid
+   *   The PID of the object.
+   *
+   * @return integer
+   *   The size of the object in bytes
+   */
+  public function getByteSizeForPid($pid) {
+    watchdog('dataone', 'call to getByteSizeForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    return -1;
+  }
+
+  /**
+   * Get the format ID of the object identified by the given PID.
+   * @see https://cn.dataone.org/cn/v1/formats
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/CN_APIs.html#CNCore.getFormat
+   *
+   * @param string $pid
+   *   The PID of the object.
+   *
+   * @return string
+   *   The format ID for the object
+   */
+  public function getFormatIdForPid($pid) {
+    watchdog('dataone', 'call to getFormatIdForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    return 'application/octet-stream';
+  }
+  /**
+   * Get the checksum of the object identified by the given PID.
+   *
+   * @param string $pid
+   *   The PID of the object.
+   *
+   * @return string
+   *   The checksum of the object
+   */
+  public function getChecksumForPid($pid) {
+    watchdog('dataone', 'call to getChecksumForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    return 'unknown';
+  }
+
+  /**
+   * Get the checksum algorithm used for the object identified by the given PID.
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.ChecksumAlgorithm
+   * @see http://id.loc.gov/vocabulary/preservation/cryptographicHashFunctions.html
+   *
+   * @param string $pid
+   *   The PID of the object.
+   *
+   * @return string
+   *   The checksum algorithm
+   */
+  public function getChecksumAlgorithmForPid($pid) {
+    watchdog('dataone', 'call to getChecksumAlgorithmForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    return 'unknown';
+  }
+
+  /**
+   * Get the serial version of the object identified by the given PID.
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.SystemMetadata.serialVersion
+   *
+   * @param string $pid
+   *   The PID of the object.
+   *
+   * @return integer
+   *   The unsigned long value representing the serial version
+   */
+  public function getSerialVersionForPid($pid) {
+    watchdog('dataone', 'call to getSerialVersionForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    return 0;
+  }
+
+  /**
+   * Get the log records given some optinal parameters.
+   *
+   * Get the log entries.
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNCore.getLogRecords
+   * @see _buildLogEntry()
+   *
+   * @param integer $start
+   *   The index into the total result at which to start
+   *
+   * @param integer $max_count
+   *   The maximum number of records to return
+   *
+   * @param integer $from_date
+   *   The date from which results start formatted as the result of strtotime()
+   *
+   * @param integer $to_date
+   *   The date to which results end formatted as the result of strtotime()
+   *
+   * @param string $event
+   *   One of the values from DataOneApiVersionApi::getDataOneEventTypes()
+   *   Values here are validated when calling _buildLogEntry()
+   *
+   * @param string $pid_filter
+   *   Return only log records for identifiers that start with this string
+   *   Support for this parameter is optional and MAY be ignored with no warning.
+   *
+   * @return array
+   */
+  protected function getLogRecordDataForParameters($start, $max_count, $from_date, $to_date, $event, $pid_filter) {
+    watchdog('dataone', 'call to getLogRecordDataForParameters() should be made by an implementing class', array(), WATCHDOG_ERROR);
+
+    // Figure out given the parameters what records to report.
+    // May use _buildLogEntry() to format the entries.
+    //
+    // Here's an example:
+    //
+    // $entries = array();
+    // $total_number_of_entries = $this->calculateTotalOfLogRecords($start, $max_count, $from_date, $to_date, $event, $pid_filter);
+    // $query_results = $query-> ... add criteria to your query.. ->execute();
+    // foreach ($query_results as $result) {
+    //   $entries[] = _buildLogEntry(..with parameters...);
+    // }
+    // $array_to_return = array(
+    //   'entries' => $entries,
+    //   'total' => $total_number_of_entries,
+    // );
+    // return $array_to_return;
+
+    return array(
+      // An array of items formatted with _buildLogEntry().
+      'entries' => array(),
+      // The total number of log records satisfying the criteria.
+      'total' => -1,
+    );
   }
 
   /**
@@ -52,17 +227,57 @@ class DataOneApiVersionOne extends DataOneApi {
   *
   * @param integer $not_authorized_code
   *   The detail code for throwing NotAuthorized Exception
+  *
+  * @param array $path_config
+  *   THe configuration array for the requested path
   */
-  protected function checkSession($invalid_token_code, $not_authorized_code) {
+  protected function checkSession($invalid_token_code, $not_authorized_code, $path_config) {
     // Check authentication.
     $session = $this->getSession();
     // If no session information, then throw Invalid Token.
-    if (empty($session)) {
-      DataOneApiVersionOne::throwInvalidToken($invalid_token_code, 'No authentication information provided');
+
+    // Check the session against the API request.
+    if  (empty($path_config['function'])) {
+      DataOneApiVersionOne::throwNotAuthorized($not_authorized_code, 'Not authorized to access the resource');
     }
 
     // An implementing class should decide if the session is not authorized and
     // call DataOneApiVersionOne::throwNotAuthorized($not_authorized_code, 'Some message');
+    switch($path_config['function']) {
+      case 'ping':
+        break;
+
+      case 'getLogRecords':
+        break;
+
+      case 'getCapabilities':
+        break;
+
+      case 'get':
+        break;
+
+      case 'getSystemMetadata':
+        break;
+
+      case 'describe':
+        break;
+
+      case 'getChecksum':
+        break;
+
+      case 'listObjects':
+        break;
+
+      case 'synchronizationFailed':
+        break;
+
+      case 'getReplica':
+        break;
+    }
+
+    if (empty($session)) {
+      DataOneApiVersionOne::throwInvalidToken($invalid_token_code, 'No authentication information provided');
+    }
   }
 
   /**
@@ -94,6 +309,7 @@ class DataOneApiVersionOne extends DataOneApi {
    * @example DataOneApiVersionOne::throwInsufficientResources(2045, 'Overloaded');
    */
   protected function ping() {
+    $content_type = 'text/plain';
     try {
       // Check that the API is live and accessible.
       // Passing the NotImplemented and ServiceFailure exception detail codes
@@ -103,12 +319,14 @@ class DataOneApiVersionOne extends DataOneApi {
     catch (DataOneApiVersionOneException $exc) {
       watchdog('dataone', $exc->__toString(), array(), $exc->getWatchdogCode());
       $response = $exc->generateErrorResponse();
-      DataOneApiVersionOne::sendResponse($response, 2042);
+      $content_type = 'application/xml';
     }
 
+    // A valid, successful ping() returns empty response.
+    $this->setResponse('', $content_type);
+
     // Send the response.
-    // The API says no body as 'text/plain' on successul, valid ping().
-    DataOneApiVersionOne::sendResponse('', 2042, 'text/plain');
+    $this->sendResponse(2042);
   }
 
   /**
@@ -149,6 +367,8 @@ class DataOneApiVersionOne extends DataOneApi {
    * @example DataOneApiVersionOne::throwNotImplemented(1461, 'The API implementation is in development');
    */
   protected function getLogRecords() {
+    // The response to send the client.
+    $response = FALSE;
     try {
       // Check that the API is live and accessible.
       // Passing the NotImplemented and ServiceFailure exception detail codes
@@ -160,26 +380,60 @@ class DataOneApiVersionOne extends DataOneApi {
 
       // Validate the session.
       // Pass the InvalidToken detail code specific to MNCore.getLogRecords().
-      $this->checkSession(1470, 1460, $path_info);
+      //$this->checkSession(1470, 1460, $path_info);
 
       // Check the query parameters.
       $raw_params = drupal_get_query_parameters();
+      // Processed and validated parameters.
       $parameters = $this->checkQueryParameters($path_info, $raw_params);
 
-      // The response to send the client.
-      $response = FALSE;
+      // Possible parameters.
+      $from_date = !empty($parameters['fromDate']) ? $parameters['fromDate'] : FALSE;
+      $to_date = !empty($parameters['toDate']) ? $parameters['toDate'] : FALSE;
+      $event = !empty($parameters['event']) ? $parameters['event'] : FALSE;
+      $pid_filter = !empty($parameters['pidFilter']) ? $parameters['pidFilter'] : FALSE;
+      $start = intval($parameters['start']);
+      $max_count = intval($parameters['count']);
 
-      // Implementation should do something here.
-      if (!$response) {
-        DataOneApiVersionOne::throwNotImplemented(1461, 'getLogRecords() has not been implemented yet.');
+      // Get the appropriate log records.
+      $records = $this->getLogRecordDataForParameters($start, $max_count, $from_date, $to_date, $event, $pid_filter);
+
+      // Build the XML elements for the response.
+      $elements = array(
+        'd1:log' => array(
+          '_keys' => array(
+            'logEntry' => '_entry_',
+          ),
+          '_attrs' => array(
+            'xmlns:d1' => 'http://ns.dataone.org/service/types/v1',
+            'count' => count($records['entries']),
+            'start' => $start,
+            'total' => $records['total'],
+          ),
+        ),
+      );
+
+      if (!empty($records['entries'])) {
+        foreach ($records['entries'] as $idx => $entry) {
+          $elements['d1:log']['_entry_' . $idx] = $entry;
+        }
       }
+
+      // Build the XML response.
+      $response = DataOneApiVersionOne::generateXmlWriter();
+      $xml = $this->generateXmlWriter();
+      $this->addXmlWriterElements($xml, $elements);
+      $response = $this->printXmlWriter($xml);
+
     }
     catch (DataOneApiVersionOneException $exc) {
       $response = $exc->generateErrorResponse();
     }
 
+    $this->setResponse($response);
+
     // Send the response.
-    DataOneApiVersionOne::sendResponse($response, 1490);
+    $this->sendResponse(1490);
   }
 
   /**
@@ -202,11 +456,12 @@ class DataOneApiVersionOne extends DataOneApi {
    * @example DataOneApiVersionOne::throwNotImplemented(2160, 'The API implementation is in development');
    */
   protected function getCapabilities() {
-
+    // The response to send the client.
+    $response = FALSE;
     try {
       // Check that the API is live and accessible.
       // Passing the NotImplemented and ServiceFailure exception detail codes
-      // specific to MNCore.getLogRecords().
+      // specific to MNCore.getCapabilities().
       $this->checkOnlineStatus(1461, 1490);
 
       // Implementation should do something here.
@@ -226,7 +481,7 @@ class DataOneApiVersionOne extends DataOneApi {
       try {
         // Check that the API is live and accessible.
         // Passing the NotImplemented and ServiceFailure exception detail codes
-        // specific to MNCore.ping().
+        // specific to MNCore.getCapabilities().
         $this->checkOnlineStatus(2160, 2162);
       }
       catch (DataOneApiVersionOneException $exc) {
@@ -301,141 +556,324 @@ class DataOneApiVersionOne extends DataOneApi {
       $response = $exc->generateErrorResponse();
     }
 
+    $this->setResponse($response);
+
     // Send the response.
-    DataOneApiVersionOne::sendResponse($response, 2162);
+    $this->sendResponse(2162);
   }
 
   /**
-   * Implements DataONE MNCore.get().
-   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNCore.get
+   * Implements DataONE MNRead.get().
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNRead.get
+   * @see readfile()
+   *
+   * Response should be a URI valid for passing to readfile().
+   * @example: $response = 'public://some data file';
+   * @example: $response = 'http://example.com/some-resource';
+   *
+   * Possible exceptions:
+   *
+   * Not Authorized
+   *   The provided identity does not have READ permission on the object.
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotAuthorized
+   * @example DataOneApiVersionOne::throwNotAuthorized(1000, 'Not authorized to read the object.');
+   *
+   * Not Found
+   *   The object specified by pid does not exist at this node. The description
+   *   should include a reference to the resolve method.
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotFound
+   * @example DataOneApiVersionOne::throwNotFound(1020, 'Object not found.');
+   *
+   * Service Failure
+   *   The object specified by pid does not exist at this node. The description
+   *   should include a reference to the resolve method.
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.ServiceFailure
+   * @example DataOneApiVersionOne::throwServiceFailure(1030, 'Failed.');
+   *
+   * Invalid Token
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.InvalidToken
+   * @example DataOneApiVersionOne::throwInvalidToken(1010, 'The session is invalid.');
+   *
+   * Not Implemented
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotImplemented
+   * @example DataOneApiVersionOne::throwNotImplemented(1001, 'The API implementation is in development');
+   *
+   * Insufficient Resources
+   *   The node is unable to service the request due to insufficient resources
+   *   such as CPU, memory, or bandwidth being over utilized.
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.InsufficientResources
+   * @example: DataOneApiVersionOne::throwInsufficientResources(1002, 'Insufficient Resources');
+   *
+   * @param string $pid
+   *   The PID of the object to return
    */
-  protected function get() {
+  protected function get($pid) {
     // The response to send the client.
     $response = FALSE;
-
+    // The content-type of the object.
+    $content_type = 'application/octet-stream';
+    $stream_response = TRUE;
     try {
-      // Do something.
+      // Check that the API is live and accessible.
+      // Passing the NotImplemented and ServiceFailure exception detail codes
+      // specific to MNRead.get().
+      $this->checkOnlineStatus(1001, 1030);
+
+      // Information about current path.
+      $path_info = $this->getPathConfig();
+
+      // Validate the session.
+      // The InvalidToken & NotAuthorized detail code specific to MNRead.get().
+      $this->checkSession(1001, 1000, $path_info);
+
+      // Setup the response.
+      $response = $this->getObjectForStreaming($pid);
+
+      // Implementation should do something here.
+      if (!$response) {
+        DataOneApiVersionOne::throwNotImplemented(1001, 'get() has not been implemented yet.');
+      }
+
     }
     catch (DataOneApiVersionOneException $exc) {
       $response = $exc->generateErrorResponse();
+      $content_type = 'application/xml';
+      $stream_response = FALSE;
     }
 
+    $this->setResponse($response, $content_type);
+
     // Send the response.
-    DataOneApiVersionOne::sendResponse($response, 1030);
+    $this->sendResponse(1030, array(), $stream_response);
   }
 
   /**
-   * Implements DataONE MNCore.getSystemMetadata().
-   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNCore.getSystemMetadata
+   * Implements DataONE MNRead.getSystemMetadata().
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNRead.getSystemMetadata
    */
   protected function getSystemMetadata() {
     // The response to send the client.
     $response = FALSE;
 
     try {
-      // Do something.
+
+      // Implementation should do something here.
+      if (!$response) {
+        DataOneApiVersionOne::throwNotImplemented(1041, 'getSystemMetadata() has not been implemented yet.');
+      }
     }
     catch (DataOneApiVersionOneException $exc) {
       $response = $exc->generateErrorResponse();
     }
 
+    $this->setResponse($response);
+
     // Send the response.
-    DataOneApiVersionOne::sendResponse($response, 1090);
+    $this->sendResponse(1090);
   }
 
   /**
-   * Implements DataONE MNCore.describe().
-   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNCore.describe
+   * Implements DataONE MNRead.describe().
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNRead.describe
+   *
+   * Possible exceptions:
+   *
+   * Not Authorized
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotAuthorized
+   * @example DataOneApiVersionOne::throwNotAuthorized(1360, 'Not authorized to read the object.');
+   *
+   * Not Found
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotFound
+   * @example DataOneApiVersionOne::throwNotFound(1380, 'Object not found.');
+   *
+   * Service Failure
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.ServiceFailure
+   * @example DataOneApiVersionOne::throwServiceFailure(1390, 'Failed.');
+   *
+   * Invalid Token
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.InvalidToken
+   * @example DataOneApiVersionOne::throwInvalidToken(1370, 'The session is invalid.');
+   *
+   * Not Implemented
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotImplemented
+   * @example DataOneApiVersionOne::throwNotImplemented(1361, 'The API implementation is in development');
+   *
+   * @param string $pid
+   *   The PID of the object to describe
    */
-  protected function describe() {
+  protected function describe($pid) {
     // The response to send the client.
     $response = FALSE;
-
+    // The content-type of the object.
+    $content_type = 'application/octet-stream';
     try {
-      // Do something.
+      // Check that the API is live and accessible.
+      // Passing the NotImplemented and ServiceFailure exception detail codes
+      // specific to MNRead.describe().
+      $this->checkOnlineStatus(1361, 1390);
+
+      // Information about current path.
+      $path_info = $this->getPathConfig();
+
+      // Validate the session.
+      // The InvalidToken & NotAuthorized detail code specific to MNRead.describe().
+      $this->checkSession(1370, 1360, $path_info);
+
+      // Put the headers to set in an array. THis provides a way for calls to
+      // get the metadata to throw Exceptions if necessary before headers are
+      // set.
+      $describe_headers = array();
+      // The Last Modified date.
+      $timestamp = $this->getLastModifiedDateForPid($pid);
+      $describe_headers['Last-Modified'] = format_date($timestamp, 'custom', DATAONE_API_DATE_FORMAT);
+      // The size, in bytes.
+      $size = $this->getByteSizeForPid($pid);
+      $describe_headers['Content-Length'] =  $size;
+      // The format ID.
+      $format_id = $this->getFormatIdForPid($pid);
+      $describe_headers['DataONE-formatId'] =  $format_id;
+      // The checksum data.
+      $checksum = $this->getChecksumForPid($pid);
+      $checksum_algorithm = $this->getChecksumAlgorithmForPid($pid);
+      $describe_headers['DataONE-Checksum'] =  $checksum_algorithm . ',' . $checksum;
+      // The Serial version.
+      $servial_version = $this->getSerialVersionForPid($pid);
+      $describe_headers['DataONE-SerialVersion'] =  $servial_version;
+
+      // Set an empty response.
+      $response = '';
     }
     catch (DataOneApiVersionOneException $exc) {
       $response = $exc->generateErrorResponse();
+      $content_type = 'application/xml';
+      $describe_headers = array();
     }
 
+    $this->setResponse($response, $content_type);
+
     // Send the response.
-    DataOneApiVersionOne::sendResponse($response, 1390);
+    $this->sendResponse(1390, $describe_headers);
   }
 
   /**
-   * Implements DataONE MNCore.getChecksum().
-   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNCore.getChecksum
+   * Implements DataONE MNRead.getChecksum().
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNRead.getChecksum
    */
   protected function getChecksum() {
     // The response to send the client.
     $response = FALSE;
 
     try {
-      // Do something.
+
+      // Implementation should do something here.
+      if (!$response) {
+        DataOneApiVersionOne::throwNotImplemented(1401, 'getChecksum() has not been implemented yet.');
+      }
     }
     catch (DataOneApiVersionOneException $exc) {
       $response = $exc->generateErrorResponse();
     }
 
+    $this->setResponse($response);
+
     // Send the response.
-    DataOneApiVersionOne::sendResponse($response, 1410);
+    $this->sendResponse(1410);
   }
 
   /**
-   * Implements DataONE MNCore.listObjects().
-   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNCore.listObjects
+   * Implements DataONE MNRead.listObjects().
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNRead.listObjects
    */
   protected function listObjects() {
     // The response to send the client.
     $response = FALSE;
 
     try {
-      // Do something.
+
+      // Implementation should do something here.
+      if (!$response) {
+        DataOneApiVersionOne::throwNotImplemented(1521, 'listObjects() has not been implemented yet.');
+      }
     }
     catch (DataOneApiVersionOneException $exc) {
       $response = $exc->generateErrorResponse();
     }
 
+    $this->setResponse($response);
+
     // Send the response.
-    DataOneApiVersionOne::sendResponse($response, 1580);
+    $this->sendResponse(1580);
   }
 
   /**
-   * Implements DataONE MNCore.synchronizationFailed().
-   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNCore.synchronizationFailed
+   * Implements DataONE MNRead.synchronizationFailed().
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNRead.synchronizationFailed
    */
   protected function synchronizationFailed() {
     // The response to send the client.
     $response = FALSE;
 
     try {
-      // Do something.
+
+      // Implementation should do something here.
+      if (!$response) {
+        DataOneApiVersionOne::throwNotImplemented(2160, 'synchronizationFailed() has not been implemented yet.');
+      }
     }
     catch (DataOneApiVersionOneException $exc) {
       $response = $exc->generateErrorResponse();
     }
 
+    $this->setResponse($response);
+
     // Send the response.
-    DataOneApiVersionOne::sendResponse($response, 2161);
+    $this->sendResponse(2161);
   }
 
   /**
-   * Implements DataONE MNCore.getReplica().
-   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNCore.getReplica
+   * Implements DataONE MNRead.getReplica().
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNRead.getReplica
    */
   protected function getReplica() {
     // The response to send the client.
     $response = FALSE;
 
     try {
-      // Do something.
+
+      // Implementation should do something here.
+      if (!$response) {
+        DataOneApiVersionOne::throwNotImplemented(2180, 'getReplica() has not been implemented yet.');
+      }
     }
     catch (DataOneApiVersionOneException $exc) {
       $response = $exc->generateErrorResponse();
     }
 
+    $this->setResponse($response);
+
     // Send the response.
-    DataOneApiVersionOne::sendResponse($response, 2181);
+    $this->sendResponse(2181);
+  }
+
+  /**
+   * Figure out which API method to run: MNRead.get() or MNRead.describe().
+   */
+  protected function getOrDescribe($args) {
+    $pid = $args[0];
+    // Figure out which HTTP method was used.
+    switch($_SERVER['REQUEST_METHOD']) {
+      case 'GET':
+        $this->get($pid);
+        break;
+
+      case 'HEAD':
+        $this->describe($pid);
+        break;
+    }
+
+    // Send an error response. We cannot send a detail code because we don't
+    // know what function was called.
+    $this->sendResponse();
   }
 
   /*** END of FUNCTIONS TO OVERRIDE ***/
@@ -444,11 +882,17 @@ class DataOneApiVersionOne extends DataOneApi {
   // The portion of the getApiMenuPaths() array related to the current request.
   protected $path_config;
 
+  // The response to send to the client.
+  protected $response;
+
+  // The value for the Content-Type HTTP response header.
+  protected $content_type = 'application/xml';
+
   /**
    * Build a request handler for the current API request.
    *
    * @param array $path_config
-   *   The path configuration from getApiMenuPaths().
+   *   Array of path configuration from getApiMenuPaths() plus request metadata
    */
   public function __construct(array $path_config) {
     // Set the path configuration.
@@ -496,6 +940,101 @@ class DataOneApiVersionOne extends DataOneApi {
   }
 
   /**
+   * Set the response.
+   *
+   * @param string $response
+   *   The response to send to the client
+   *
+   * @param string $content_type
+   *   The value for the Content-Type HTTP response header
+   */
+  protected function setResponse($response, $content_type = 'application/xml') {
+    $this->response = $response;
+    $this->content_type = $content_type;
+  }
+
+  /**
+   * Get the response.
+   *
+   * @return string
+   *   The response to send the client.
+   */
+  protected function getResponse() {
+    return $this->response;
+  }
+
+  /**
+   * Get the content type of the response.
+   *
+   * @return string
+   *   The content-type
+   */
+  protected function getContentType() {
+    return $this->content_type;
+  }
+
+  /**
+   * Send the response to the client.
+   *
+   * @param mixed $service_failure_code
+   *   Either the request-specific detail code or FALSE
+   *
+   * @param array $headers
+   *   An array of HTTP response headers to set.
+   *
+   * @param BOOL $stream_response
+   *   Either TRUE or FALSE.
+   *   If TRUE, $this->getResponse() should be a valid value for readfile().
+   *   @see readfile()
+   */
+  protected function sendResponse($service_failure_code = FALSE, $headers = array(), $stream_response = FALSE) {
+    // Check the response.
+    $response_body = $this->getResponse();
+    // Get the content-type.
+    $content_type = $this->getContentType();
+    // Using is_string() is used b/c empty srting can be a valid response.
+    // @see ping()
+    if (!is_string($response_body)) {
+      // Send a Service Failure response.
+      if ($service_failure_code) {
+        $msg = t('Unknown error occurred with response: !resp', array('!resp' => $response_body));
+        try {
+          DataOneApiVersionOne::throwServiceFailure($service_failure_code, $msg);
+        } catch(Exception $exc) {
+          watchdog('dataone', $exc->__toString(), array(), $exc->getWatchdogCode());
+          $response_body = $exc->generateErrorResponse();
+          $content_type = 'application/xml';
+        }
+      }
+      else {
+        // Send a plain message to help with development.
+        $headers['Status'] = 500;
+        $response_body = 'Unknown error occurred without a service failure code.';
+        $content_type = 'text/plain';
+      }
+    }
+
+    // Set the Content-Type header.
+    $headers['Content-Type'] = $content_type;
+    // Set HTTP headers.
+    foreach ($headers as $header => $value) {
+      drupal_add_http_header($header, $value);
+    }
+    drupal_send_headers();
+
+    // Send the response.
+    if ($stream_response) {
+      readfile($response_body);
+    }
+    else {
+      print $response_body;
+    }
+
+    // Finish the response.
+    drupal_exit();
+  }
+
+  /**
    * Access control for a request.
    *
    * @param array $args
@@ -520,15 +1059,24 @@ class DataOneApiVersionOne extends DataOneApi {
 
     // Call the related function.
     $function = $this->getRequestedFunction();
-    $this->$function($args);
+    if ($function) {
+      $this->$function($args);
+    }
+    else {
+      drupal_set_message(t('Could not determine the DataONE Member Node API function to execute'), 'error');
+      drupal_not_found();
+    }
   }
 
   /**
    * Get the function assigned to the current request.
+   *
+   * @return mixed
+   *   The function name to call as a string or FALSE if not found
    */
   protected function getRequestedFunction() {
     $cfg = $this->getPathConfig();
-    return $cfg['function'];
+    return !empty($cfg['function']) ? $cfg['function'] : FALSE;
   }
 
   /**
@@ -591,6 +1139,10 @@ class DataOneApiVersionOne extends DataOneApi {
       if (TRUE == $parameter_info['required'] && empty($parameters[$query_param])) {
         DataOneApiVersionOne::throwInvalidRequest(1480, 'Required parameter "$query_param" is missing.');
       }
+      // Set any default values for missing parameters.
+      if (!empty($parameter_info['default_value']) && TRUE == $parameter_info['default_value'] && empty($parameters[$query_param])) {
+        $parameters[$query_param] = $parameter_info['default_value'];
+      }
     }
 
     // The processed parameters and values.
@@ -645,41 +1197,54 @@ class DataOneApiVersionOne extends DataOneApi {
    * @param array $parameter_info
    *   The configuration info for the specified parameter in getApiMenuPaths().
    *
-   * @param mixed $value
+   * @param array $values
    *   The value of the parameter from drupal_get_query_parameters().
    *
    * @param integer $invalid_request_code
    *   The InvalidRequest detail code specific to the calling function
    *
-   * @return mixed
-   *   The processed value for use by the calling function
+   * @return array
+   *   The processed values for use by the calling function
    */
-  protected function processRequestParameter($parameter, $parameter_info, $value, $invalid_request_code) {
+  protected function processRequestParameter($parameter, $parameter_info, $values, $invalid_request_code) {
+
     // Check the data type.
     if (!empty($parameter_info['type'])) {
-      switch ($parameter_info['type']) {
-        case 'date':
-          $date = strtotime($value);
-          if (!$date) {
-            // Trace info for any possible exceptions.
-            $trace_info = $this->getTraceInformationForRequestParameter($parameter, $value);
-            $msg = t('!param must be a date.', array('!param' => $parameter));
-            DataOneApiVersionOne::throwInvalidRequest($invalid_request_code, $msg, $trace_info);
-          }
-          break;
+      foreach ($values as $idx => $value) {
+        switch ($parameter_info['type']) {
+          case 'date':
+            $date = strtotime($value);
+            if (!$date) {
+              // Trace info for any possible exceptions.
+              $trace_info = $this->getTraceInformationForRequestParameter($parameter, $value);
+              $msg = t('!param must be a date.', array('!param' => $parameter));
+              DataOneApiVersionOne::throwInvalidRequest($invalid_request_code, $msg, $trace_info);
+            }
+            break;
 
-        case 'integer':
-          if ($value !== '' && (!is_numeric($value) || intval($value) != $value)) {
-            // Trace info for any possible exceptions.
-            $trace_info = $this->getTraceInformationForRequestParameter($parameter, $value);
-            $msg = t('!param must be an integer.', array('!param' => $parameter));
-            DataOneApiVersionOne::throwInvalidRequest($invalid_request_code, $msg, $trace_info);
-          }
-          break;
+          case 'integer':
+            if ($value !== '' && !is_numeric($value)) {
+              // Trace info for any possible exceptions.
+              $trace_info = $this->getTraceInformationForRequestParameter($parameter, $value);
+              $msg = t('!param must be an integer.', array('!param' => $parameter));
+              DataOneApiVersionOne::throwInvalidRequest($invalid_request_code, $msg, $trace_info);
+            }
+            break;
+        }
+        // Floor and ceiling constraints.
+        if (!empty($parameter_info['ceiling']) && $parameter_info['ceiling'] < $value) {
+          $values[$idx] = $parameter_info['ceiling'];
+        }
+        if (!empty($parameter_info['floor']) && $parameter_info['floor'] > $value) {
+          $values[$idx] = $parameter_info['floor'];
+        }
       }
     }
+    if (!empty($parameter_info['max_cardinality']) && 1 == $parameter_info['max_cardinality']) {
+      return $values[0];
+    }
 
-    return $value;
+    return $values;
   }
 
   /**
@@ -730,14 +1295,14 @@ class DataOneApiVersionOne extends DataOneApi {
     return array(
       'MNCore.ping()' => array(
         'paths' => array('/monitor/ping'),
-        'method' => 'GET',
+        'method' => array('GET' => 'MNCore.ping()'),
         'access callback' => 'dataone_api_access',
         'access arguments' => array(DATAONE_API_VERSION_1),
         'function' => 'ping',
       ),
       'MNCore.getLogRecords()' => array(
         'paths' => array('/log'),
-        'method' => 'GET',
+        'method' => array('GET' => 'MNCore.getLogRecords()'),
         'access callback' => 'dataone_api_access',
         'access arguments' => array(DATAONE_API_VERSION_1),
         'function' => 'getLogRecords',
@@ -771,35 +1336,42 @@ class DataOneApiVersionOne extends DataOneApi {
             'type' => 'integer',
             'default_value' => _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_MAX_LOG_COUNT, DATAONE_DEFAULT_MAX_LOG_RECORDS),
             'max_cardinality' => 1,
+            'ceiling' => _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_MAX_LOG_COUNT, DATAONE_DEFAULT_MAX_LOG_RECORDS),
           ),
         ),
       ),
       'MNCore.getCapabilities()' => array(
         'paths' => array('', '/node'),
-        'method' => 'GET',
+        'method' => array('GET' => 'MNCore.getCapabilities()'),
         'access callback' => 'dataone_api_access',
         'access arguments' => array(DATAONE_API_VERSION_1),
         'function' => 'getCapabilities',
       ),
+      'MNRead.get() & MNRead.describe()' => array(
+        'paths' => array('/object/%dataone'),
+        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid'),
+        'method' => array(
+          'GET' => 'MNRead.get()',
+          'HEAD' => 'MNRead.describe()',
+        ),
+        'access callback' => 'dataone_api_access',
+        'access arguments' => array(DATAONE_API_VERSION_1, 1),
+        'function' => 'getOrDescribe',
+        'arguments' => array(1 => 'pid'),
+      ),
       'MNRead.getSystemMetadata()' => array(
-        'paths' => array('/meta/%dataone_api_v1_pid'),
-        'method' => 'GET',
+        'paths' => array('/meta/%dataone'),
+        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid'),
+        'method' => array('GET' => 'MNRead.getSystemMetadata()'),
         'access callback' => 'dataone_api_access',
         'access arguments' => array(DATAONE_API_VERSION_1, 1),
         'function' => 'getSystemMetadata',
         'arguments' => array(1 => 'pid'),
       ),
-      'MNRead.describe()' => array(
-        'paths' => array('/object/%dataone_api_v1_pid'),
-        'method' => 'GET',
-        'access callback' => 'dataone_api_access',
-        'access arguments' => array(DATAONE_API_VERSION_1, 1),
-        'function' => 'describe',
-        'arguments' => array(1 => 'pid'),
-      ),
       'MNRead.getChecksum()' => array(
-        'paths' => array('/checksum/%dataone_api_v1_pid'),
-        'method' => 'GET',
+        'paths' => array('/checksum/%dataone'),
+        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid'),
+        'method' => array('GET' => 'MNRead.getChecksum()'),
         'access callback' => 'dataone_api_access',
         'access arguments' => array(DATAONE_API_VERSION_1, 1),
         'function' => 'getChecksum',
@@ -810,7 +1382,7 @@ class DataOneApiVersionOne extends DataOneApi {
       ),
       'MNRead.listObjects()' => array(
         'paths' => array('/object'),
-        'method' => 'GET',
+        'method' => array('GET' => 'MNRead.listObjects()'),
         'access callback' => 'dataone_api_access',
         'access arguments' => array(DATAONE_API_VERSION_1),
         'function' => 'listObjects',
@@ -825,7 +1397,7 @@ class DataOneApiVersionOne extends DataOneApi {
       ),
       'MNRead.synchronizationFailed()' => array(
         'paths' => array('/error'),
-        'method' => 'POST',
+        'method' => array('POST' => 'MNRead.synchronizationFailed()'),
         'access callback' => 'dataone_api_access',
         'access arguments' => array(DATAONE_API_VERSION_1),
         'function' => 'synchronizationFailed',
@@ -834,11 +1406,13 @@ class DataOneApiVersionOne extends DataOneApi {
         ),
       ),
       'MNRead.getReplica()' => array(
-        'paths' => array('/replica/%dataone_api_v1_pid'),
-        'method' => 'GET',
+        'paths' => array('/replica/%dataone'),
+        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid'),
+        'method' => array('GET' => 'MNRead.getReplica()'),
         'access callback' => 'dataone_api_access',
         'access arguments' => array(DATAONE_API_VERSION_1),
         'function' => 'getReplica',
+        'arguments' => array(1 => 'pid'),
       ),
     );
   }
@@ -856,56 +1430,23 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The menu path information related to the given path
    */
   static public function getPathInformation($path) {
+    // The correlated Drupal menu item.
+    $menu_item = menu_get_item();
+    // Setup an array of request metadata to pass along.
+    $request_data = array(
+      'path' => $path,
+    );
+    // The known paths for this API.
     $paths = DataOneApiVersionOne::getApiMenuPaths();
-    if (!empty($paths)) {
-      foreach ($paths as $title => $info) {
-        if (in_array($path, $info['paths'])) {
-          return $info;
-        }
-      }
+    // Can we match the menu_get_item() title to a DataOneApiMenuPaths()?
+    if (!empty($menu_item['title'])) {
+      $path_info = $paths[$menu_item['title']];
+      $request_data['api_key'] = $menu_item['title'];
+      $path_info['_request'] = $request_data;
+      return $path_info;
     }
 
-    return FALSE;
-  }
-
-  /**
-   * Generate DataONE API response.
-   *
-   * @param string $response
-   *   The string to send the client
-   *
-   * @param integer $error_code
-   *   The ServiceFailure exception detail code for the calling function
-   *
-   * @param string $content_type
-   *   The content type header value.
-   *   Most all services of API ver. 1 are XML
-   */
-  static public function sendResponse($response, $error_code = FALSE, $content_type = 'application/xml') {
-    // Send the response.
-    if (is_string($response)) {
-      print $response;
-    }
-    elseif ($error_code) {
-      $msg = t('Unknown error occurred with response: !resp', array('!resp' => $response));
-      try {
-        DataOneApiVersionOne::throwServiceFailure($error_code, $msg);
-      } catch(Exception $exc) {
-        watchdog('dataone', $exc->__toString(), array(), $exc->getWatchdogCode());
-        print $exc->generateErrorResponse();
-      }
-    }
-    else {
-      drupal_add_http_header('Status', 500);
-      print 'Unknown error occurred without a service failure code.';
-      $content_type = 'text/plain';
-    }
-
-    // Set the Content-Type.
-    drupal_add_http_header('Content-Type', $content_type);
-
-    // Quit processing of the request.
-    drupal_exit();
+    return $request_data;
   }
 
   /**
@@ -1217,5 +1758,85 @@ class DataOneApiVersionOne extends DataOneApi {
    */
   static public function throwVersionMismatch($detail_code, $message, $trace_info = array(), $watchdog_code = WATCHDOG_ERROR) {
     throw new DataOneApiVersionOneException('VersionMismatch', 409, $detail_code, $message, $trace_info, $watchdog_code);
+  }
+
+    /**
+   * Build a log entry.
+   *
+   * Called by getLogRecordsForParameters().
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.LogEntry
+   *
+   * @param string $entry_id
+   *   A unique identifier for this log entry.
+   *   The identifier should be unique for a particular Member Node.
+   *
+   * @param string $identifier
+   *   The identifier of the object related to this log entry.
+   *
+   * @param string $ip_address
+   *   The IP Address of the acting client
+   *
+   * @param string $user_agent
+   *   The User Agent as reported in the User-Agent HTTP header of the client.
+   *
+   * @param string $subject
+   *   The X.509 Distinguished Name
+   *   @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.Subject
+   *
+   * @param string $event
+   *   The operation that occurred reported as a DataONE event
+   *   @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.Event
+   *   Possible values: create, read, update, delete, replicate, synchronization_failed, replication_failed
+   *
+   * @param integer $date_logged
+   *   The date timestamp to be used by format_date()
+   *   @see format_date()
+   *
+   * @return array
+   *   A log entry
+   */
+  protected function _buildLogEntry($entry_id, $identifier, $ip_address, $user_agent, $subject, $event, $date_logged) {
+    $data = &drupal_static(__FUNCTION__, array());
+    if (!isset($data['event_types'])) {
+      $data['event_types'] = $this::getDataOneEventTypes();
+    }
+
+    // Build the entry.
+    $entry = array(
+      'entryId' => $entry_id,
+      'identifier' => $identifier,
+      'ipAddress' => $ip_address,
+      'userAgent' => $user_agent,
+      'subject' => $subject,
+      'event' => $event,
+      'dateLogged' => format_date($date_logged, 'custom', DATAONE_API_DATE_FORMAT),
+      'nodeIdentifier' => _dataone_get_member_node_identifier(TRUE),
+    );
+
+    // Validate the entry.
+    if (!in_array($event, $data['event_types'])) {
+      $msg = t('Invalid event type "!type" for entry !entry', array('!type' => $event, '!entry' => $entry_id));
+      DataOneApiVersionOne::throwServiceFailure(1490, $msg, $entry);
+    }
+
+    return $entry;
+  }
+
+  /**
+   * Get the possible values for a DataONE Event type.
+   *
+   * @return array
+   *   The event types as strings
+   */
+  static public function getDataOneEventTypes() {
+    return array(
+      'create',
+      'read',
+      'update',
+      'delete',
+      'replicate',
+      'synchronization_failed',
+      'replication_failed',
+    );
   }
 }

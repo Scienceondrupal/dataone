@@ -59,7 +59,7 @@ function dataone_admin_settings($form, &$form_state) {
     '#type' => 'textarea',
     '#cols' => 80,
     '#title' => t('Member Node Subject(s)'),
-    '#description' => t('The X.509 Distinguished Names that are, or where, valid at one point in time.<br/><strong>One subject per line.</strong>'),
+    '#description' => t('The X.509 Distinguished Names that are, or were, valid at one point in time.<br/><strong>One subject per line.</strong>'),
     '#required' => TRUE,
     '#default_value' => _dataone_get_member_node_subjects(),
     '#weight' => 4,
