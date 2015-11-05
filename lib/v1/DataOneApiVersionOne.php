@@ -26,6 +26,7 @@
  * getSerialVersionForPid($pid)
  * getObjectForStreaming($pid)
  * getLogRecordDataForParameters($start, $max_count, $from_date, $to_date, $event, $pid_filter)
+ * alterMemberNodeCapabilities($elements)
  */
 
 class DataOneApiVersionOne extends DataOneApi {
@@ -157,6 +158,23 @@ class DataOneApiVersionOne extends DataOneApi {
   public function getSerialVersionForPid($pid) {
     watchdog('dataone', 'call to getSerialVersionForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
     return 0;
+  }
+
+  /**
+   * Alter the Member Node capabilities for function MNCore.getCapabilities().
+   * Provides a way for extending classes to overrride
+   * @see getCapabilities()
+   * @see DataOneApiXml::addXmlWriterElements()
+   *
+   * @param array $elements
+   *   The content of the d1:node XML response
+   *
+   * @return array
+   *   The array of elements for DataOneApiXml::addXmlWriterElements()
+   */
+  protected function alterMemberNodeCapabilities($elements) {
+    // By default, return the original array.
+    return $elements;
   }
 
   /**
@@ -548,8 +566,10 @@ class DataOneApiVersionOne extends DataOneApi {
         $elements['d1:node']['_subject_' . $idx] = $subject;
       }
 
+      $altered_elements = $this->alterMemberNodeCapabilities($elements);
+
       $xml = $this->generateXmlWriter();
-      $this->addXmlWriterElements($xml, $elements);
+      $this->addXmlWriterElements($xml, $altered_elements);
       $response = $this->printXmlWriter($xml);
     }
     catch (DataOneApiVersionOneException $exc) {
