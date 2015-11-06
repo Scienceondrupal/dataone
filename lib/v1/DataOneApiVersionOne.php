@@ -617,6 +617,7 @@ class DataOneApiVersionOne extends DataOneApi {
   /**
    * Implements DataONE MNCore.ping().
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNCore.ping
+   * @example https://dev.nceas.ucsb.edu/knb/d1/mn/v1/monitor/ping
    *
    * Possible exceptions:
    *
@@ -671,6 +672,7 @@ class DataOneApiVersionOne extends DataOneApi {
   /**
    * Implements DataONE MNCore.getLogRecords().
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNCore.getLogRecords
+   * @example https://dev.nceas.ucsb.edu/knb/d1/mn/v1/log
    *
    * Possible exceptions:
    *
@@ -774,6 +776,7 @@ class DataOneApiVersionOne extends DataOneApi {
   /**
    * Implements DataONE MNCore.getCapabilities().
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNCore.getCapabilities
+   * @example https://cn-stage-2.test.dataone.org/cn/v1/node
    *
    * Possible exceptions:
    *
@@ -906,6 +909,7 @@ class DataOneApiVersionOne extends DataOneApi {
    * Implements DataONE MNRead.get().
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNRead.get
    * @see readfile()
+   * @example (GET) https://dev.nceas.ucsb.edu/knb/d1/mn/v1/object/0e945ef6-48e1-433c-9962-e7cebb6b9ebd
    *
    * Response should be a URI valid for passing to readfile().
    * @example: $response = 'public://some data file';
@@ -990,6 +994,7 @@ class DataOneApiVersionOne extends DataOneApi {
    * Implements DataONE MNRead.getSystemMetadata().
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNRead.getSystemMetadata
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/design/SystemMetadata.html
+   * @example https://dev.nceas.ucsb.edu/knb/d1/mn/v1/meta/0e945ef6-48e1-433c-9962-e7cebb6b9ebd
    *
    * Possible exceptions:
    *
@@ -1147,6 +1152,7 @@ class DataOneApiVersionOne extends DataOneApi {
   /**
    * Implements DataONE MNRead.describe().
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNRead.describe
+   * @example (HEAD) https://dev.nceas.ucsb.edu/knb/d1/mn/v1/object/0e945ef6-48e1-433c-9962-e7cebb6b9ebd
    *
    * Possible exceptions:
    *
