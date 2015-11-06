@@ -338,14 +338,13 @@ function _dataone_admin_synchronize_options() {
 
 /**
  * Get the possible Member Node checksum algorithm options.
+ * @see http://id.loc.gov/vocabulary/preservation/cryptographicHashFunctions.html
  *
  * @return array
  *   Associative array of accepted values for a Member Node's checksum algorithm
  */
 function _dataone_admin_checksum_algorithm_options() {
-  $options = array(
-    'MD5'
-  );
+  $options = array('Adler-32', 'CRC32', 'MD5', 'SHA-1', 'SHA-256', 'SHA-384', 'SHA-512', 'Whirlpool');
   return drupal_map_assoc($options);
 
 }

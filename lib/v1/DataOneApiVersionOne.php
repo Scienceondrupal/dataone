@@ -390,17 +390,41 @@ class DataOneApiVersionOne extends DataOneApi {
    * @param mixed $pid
    *   The result of loadPid()
    *
+   * @param string $algorithm
+   *   The checksum algorithm to use
+   *   @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.ChecksumAlgorithm
+   *   @see http://id.loc.gov/vocabulary/preservation/cryptographicHashFunctions.html
+   *
    * @return string
    *   The checksum of the object
+   *   @see http://php.net/manual/en/function.hash-file.php
    */
   public function getChecksumForPid($pid, $algorithm) {
     watchdog('dataone', 'call to getChecksumForPid(@pid, @algorithm) should be made by an implementing class', array('@pid' => $pid, 'algorithm' => $algorithm), WATCHDOG_ERROR);
 
     switch($algorithm) {
+      case 'Adler-32':
+        //return hash_file('adler32', $pid->getFilePath());
+      case 'CRC32':
+        //$hash = hash_file('crc32b', $pid->getFilePath());
+        //$crc32 = unpack('N', pack('H*', $hash));
+        //return $crc32[1];
+      case 'MD2':
+        //return hash_file('md2', pid->getFilePath());
+      case 'SHA-1':
+        //return sha1_file($pid->getFilePath());
+      case 'SHA-256':
+        //return hash_file('sha256', $pid->getFilePath());
+      case 'SHA-384':
+        //return hash_file('sha384', $pid->getFilePath());
+      case 'SHA-512':
+        //return hash_file('sha512', $pid->getFilePath());
+      case 'Whirlpool':
+        //return hash_file('whirlpool', $pid->getFilePath();
+
       case 'MD5':
       default:
-        //return md5(strval($pid));
-
+        //return md5_file($pid->getFilePath());
     }
 
     return 'unknown';
