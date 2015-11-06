@@ -718,11 +718,9 @@ class DataOneApiVersionOne extends DataOneApi {
       // Pass the InvalidToken detail code specific to MNCore.getLogRecords().
       $this->checkSession(1470, 1460);
 
-      // Check the query parameters.
-      $raw_params = drupal_get_query_parameters();
-      // Processed and validated parameters.
-      $path_info = $this->getPathConfig();
-      $parameters = $this->checkQueryParameters($path_info, $raw_params);
+      // Request query parameters, checked, validated and processed.
+      // Passing the InvalidRequest exception detail code.
+      $parameters = $this->getQueryParameters(1480);
 
       // Possible parameters.
       $from_date = !empty($parameters['fromDate']) ? $parameters['fromDate'] : FALSE;
@@ -1636,22 +1634,24 @@ class DataOneApiVersionOne extends DataOneApi {
   /**
    * Check for Invalid parameters for a request.
    *
-   * @param array $path_info
-   *   The information about the path of the current request
-   *
-   * @param array $parameters
-   *   an array of query parameters from drupal_get_query_parameters()
+   * @param integer $invalid_request_code
+   *   The detail code for throwing the InvalidRequest exception
    *
    * @return array
    *   Processed parameter values formatted like drupal_get_query_parameters()
    *   except that single values are formatted as an array of one value.
    */
-  protected function checkQueryParameters($path_info, $parameters) {
+  protected function getQueryParameters($invalid_request_code) {
+    // Check the query parameters.
+    $raw_params = drupal_get_query_parameters();
+    // Processed and validated parameters.
+    $path_info = $this->getPathConfig();
+
     // Check for required or invalid parameters.
     foreach ($path_info['query_parameters'] as $query_param => $parameter_info) {
       // Any missing required parameters?
       if (TRUE == $parameter_info['required'] && empty($parameters[$query_param])) {
-        DataOneApiVersionOne::throwInvalidRequest(1480, 'Required parameter "$query_param" is missing.');
+        DataOneApiVersionOne::throwInvalidRequest($invalid_request_code, 'Required parameter "$query_param" is missing.');
       }
       // Set any default values for missing parameters.
       if (!empty($parameter_info['default_value']) && TRUE == $parameter_info['default_value'] && empty($parameters[$query_param])) {
@@ -1675,14 +1675,14 @@ class DataOneApiVersionOne extends DataOneApi {
             $msg_params = array('!param' => $parameter, '@max' => $max_card, '@count' => $count);
             $msg = t('The maximum cardinality of parameter "!param" is @max, but received @count', $msg_params);
             $trace_info = $this->getTraceInformationForRequestParameter($parameter, $value);
-            DataOneApiVersionOne::throwInvalidToken(1480, $msg, $trace_info);
+            DataOneApiVersionOne::throwInvalidToken($invalid_request_code, $msg, $trace_info);
           }
           // Minimum cardinality.
           elseif ($min_card && ($max_count < $min_card)) {
             $msg_params = array('!param' => $parameter, '@min' => $min_card, '@count' => $count);
             $msg = t('The minimum cardinality of parameter "!param" is @min, but received @count', $msg_params);
             $trace_info = $this->getTraceInformationForRequestParameter($parameter, $value);
-            DataOneApiVersionOne::throwInvalidToken(1480, $msg, $trace_info);
+            DataOneApiVersionOne::throwInvalidToken($invalid_request_code, $msg, $trace_info);
           }
         }
 
@@ -1690,7 +1690,7 @@ class DataOneApiVersionOne extends DataOneApi {
         if (!empty($path_info['query_parameters'][$parameter])) {
           $param_info = $path_info['query_parameters'][$parameter];
           $array_value = is_array($value) ? $value : array($value);
-          $processed_parameters[$parameter] = $this->processRequestParameter($parameter, $param_info, $array_value, 1480);
+          $processed_parameters[$parameter] = $this->processRequestParameter($parameter, $param_info, $array_value, $invalid_request_code);
         }
         else {
           // Ignore unknown parameters.
