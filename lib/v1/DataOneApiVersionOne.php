@@ -643,6 +643,8 @@ class DataOneApiVersionOne extends DataOneApi {
    * @example DataOneApiVersionOne::throwInsufficientResources(2045, 'Overloaded');
    */
   protected function ping() {
+    // The response to send the client.
+    $response = FALSE;
     $content_type = 'text/plain';
     try {
       // Check that the API is live and accessible.
