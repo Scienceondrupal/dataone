@@ -395,6 +395,14 @@ class DataOneApiVersionOne extends DataOneApi {
    */
   public function getChecksumForPid($pid, $algorithm) {
     watchdog('dataone', 'call to getChecksumForPid(@pid, @algorithm) should be made by an implementing class', array('@pid' => $pid, 'algorithm' => $algorithm), WATCHDOG_ERROR);
+
+    switch($algorithm) {
+      case 'MD5':
+      default:
+        //return md5(strval($pid));
+
+    }
+
     return 'unknown';
   }
 
@@ -1272,38 +1280,24 @@ class DataOneApiVersionOne extends DataOneApi {
       // Passing the InvalidRequest exception detail code.
       $parameters = $this->getQueryParameters(1402);
 
-      // Possible parameters.
-      $algorithm = $parameters['checksumAlgorithm'];
-
       // Get the checksum.
-      // Allow extending classes an easier way to alter the results.
+      // Algorithm has a default value defined in getApiMenuPaths() if absent.
+      $algorithm = $parameters['checksumAlgorithm'];
       $checksum = $this->getChecksumForPid($pid, $algorithm);
 
       // Build the XML elements for the response.
       $elements = array(
-        'd1:log' => array(
-          '_keys' => array(
-            'logEntry' => '_entry_',
-          ),
+        'd1:checksum' => array(
           '_attrs' => array(
             'xmlns:d1' => 'http://ns.dataone.org/service/types/v1',
-            'count' => count($records['entries']),
-            'start' => $start,
-            'total' => $records['total'],
+            'algorithm' => $algorithm,
           ),
+          '_text' => $checksum,
         ),
       );
 
-      if (!empty($records['entries'])) {
-        foreach ($records['entries'] as $idx => $entry) {
-          $elements['d1:log']['_entry_' . $idx] = $entry;
-        }
-      }
-
-      // Allow extending classes an easier way to alter the results.
-      $altered_elements = $this->alterGetLogRecords($elements);
-      // Build the XML response.
-      $response = $this->getXml($altered_elements);
+      // Get the XML response.
+      $response = $this->getXml($elements);
 
     }
     catch (DataOneApiVersionOneException $exc) {
@@ -1969,7 +1963,11 @@ class DataOneApiVersionOne extends DataOneApi {
         'function' => 'getChecksum',
         'arguments' => array(1 => 'pid'),
         'query_parameters' => array(
-          'checksumAlgorithm' => array('required' => FALSE, 'default_value' => _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_CHECKSUM_ALGORITHM)),
+          'checksumAlgorithm' => array(
+            'required' => FALSE,
+            'max_cardinality' => 1,
+            'default_value' => _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_CHECKSUM_ALGORITHM),
+          ),
         ),
       ),
       'MNRead.listObjects()' => array(
