@@ -1551,7 +1551,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The value of the HTTP response header
    */
   protected function setResponseHeader($header, $value) {
-    $this->headers[$header] = value;
+    $this->headers[$header] = $value;
   }
 
   /**
