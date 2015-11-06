@@ -233,10 +233,10 @@ class DataOneApiVersionOne extends DataOneApi {
     );
   }
 
-    /**
+  /**
    * Alter the Member Node capabilities for function MNCore.getCapabilities().
    * Provides a way for extending classes to overrride
-   * @see getCapabilities()
+   * @see DataOneApiVersionOne::getCapabilities()
    * @see DataOneApiXml::addXmlWriterElements()
    *
    * @param array $elements
@@ -247,6 +247,42 @@ class DataOneApiVersionOne extends DataOneApi {
    */
   protected function alterMemberNodeCapabilities($elements) {
     // By default, return the original array.
+    return $elements;
+  }
+
+  /**
+   * Alter the log records for function MNCore.getLogRecords().
+   * Provides a way for extending classes to overrride
+   * @see DataOneApiVersionOne::getLogRecords()
+   * @see DataOneApiXml::addXmlWriterElements()
+   *
+   * @param array $elements
+   *   The content of the d1:log XML response
+   *
+   * @return array
+   *   The array of elements for DataOneApiXml::addXmlWriterElements()
+   */
+  protected function alterGetLogRecords($elements) {
+    // By default, return the original array.
+    return $elements;
+  }
+
+  /**
+   * Alter the system metadata for function MNRead.getCapabilities().
+   * Provides a way for extending classes to overrride
+   * @see getSystemMetadata()
+   * @see DataOneApiXml::addXmlWriterElements()
+   *
+   * @param mixed $pid
+   *   The result of loadPid()
+   *
+   * @param array $elements
+   *   The content of the d1:systemMetadata XML response
+   *
+   * @return array
+   *   The array of elements for DataOneApiXml::addXmlWriterElements()
+   */
+  protected function alterSystemMetadata($pid, $elements) {
     return $elements;
   }
 
@@ -269,25 +305,6 @@ class DataOneApiVersionOne extends DataOneApi {
     global $base_url;
     watchdog('dataone', 'call to getObjectForStreaming(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
     return $base_url;
-  }
-
-  /**
-   * Alter the system metadata for function MNRead.getCapabilities().
-   * Provides a way for extending classes to overrride
-   * @see getSystemMetadata()
-   * @see DataOneApiXml::addXmlWriterElements()
-   *
-   * @param mixed $pid
-   *   The result of loadPid()
-   *
-   * @param array $elements
-   *   The content of the d1:systemMetadata XML response
-   *
-   * @return array
-   *   The array of elements for DataOneApiXml::addXmlWriterElements()
-   */
-  protected function alterSystemMetadata($pid, $elements) {
-    return $elements;
   }
 
   /**
@@ -755,12 +772,10 @@ class DataOneApiVersionOne extends DataOneApi {
         }
       }
 
+      // Allow extending classes an easier way to alter the results.
+      $altered_elements = $this->alterGetLogRecords($elements);
       // Build the XML response.
-      $response = DataOneApiVersionOne::generateXmlWriter();
-      $xml = $this->generateXmlWriter();
-      $this->addXmlWriterElements($xml, $elements);
-      $response = $this->printXmlWriter($xml);
-
+      $response = $this->getXml($altered_elements);
     }
     catch (DataOneApiVersionOneException $exc) {
       $response = $exc->generateErrorResponse();
@@ -824,10 +839,9 @@ class DataOneApiVersionOne extends DataOneApi {
         $this->checkOnlineStatus(2160, 2162);
       }
       catch (DataOneApiVersionOneException $exc) {
-        // If an Exception is thrown ping() is false.
+        // If an Exception is thrown, report ping as "false".
         $ping = DATAONE_API_FALSE_STRING;
       }
-
 
       $elements = array(
         'd1:node' => array(
@@ -890,10 +904,8 @@ class DataOneApiVersionOne extends DataOneApi {
 
       // Allow extending classes an easier way to alter the results.
       $altered_elements = $this->alterMemberNodeCapabilities($elements);
-
-      $xml = $this->generateXmlWriter();
-      $this->addXmlWriterElements($xml, $altered_elements);
-      $response = $this->printXmlWriter($xml);
+      // Build the XML response.
+      $response = $this->getXml($altered_elements);
     }
     catch (DataOneApiVersionOneException $exc) {
       $response = $exc->generateErrorResponse();
@@ -1131,10 +1143,8 @@ class DataOneApiVersionOne extends DataOneApi {
 
       // Allow extending classes an easier way to alter the results.
       $altered_elements = $this->alterSystemMetadata($pid, $elements);
-
-      $xml = $this->generateXmlWriter();
-      $this->addXmlWriterElements($xml, $altered_elements);
-      $response = $this->printXmlWriter($xml);
+      // Build the XML response.
+      $response = $this->getXml($altered_elements);
     }
     catch (DataOneApiVersionOneException $exc) {
       $response = $exc->generateErrorResponse();
@@ -2070,6 +2080,21 @@ class DataOneApiVersionOne extends DataOneApi {
       'write',
       'changePermission',
     );
+  }
+
+  /**
+   * Get the XML as string for the given elements.
+   *
+   * @param array $elements
+   *   An array formatted for addXmlWriterElements()
+   *
+   * @return string
+   *   The XML
+   */
+  public function getXml($elements) {
+    $xml = $this->generateXmlWriter();
+    $this->addXmlWriterElements($xml, $elements);
+    return $this->printXmlWriter($xml);
   }
 
   /**
