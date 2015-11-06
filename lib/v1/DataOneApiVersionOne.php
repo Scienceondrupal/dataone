@@ -649,6 +649,9 @@ class DataOneApiVersionOne extends DataOneApi {
       // Passing the NotImplemented and ServiceFailure exception detail codes
       // specific to MNCore.ping().
       $this->checkOnlineStatus(2041, 2042);
+
+      // A valid, successful ping() returns empty response.
+      $response = '';
     }
     catch (DataOneApiVersionOneException $exc) {
       watchdog('dataone', $exc->__toString(), array(), $exc->getWatchdogCode());
@@ -657,8 +660,7 @@ class DataOneApiVersionOne extends DataOneApi {
       $this->setResponseHeader('Status', $exc->getErrorCode());
     }
 
-    // A valid, successful ping() returns empty response.
-    $this->setResponse('', $content_type);
+    $this->setResponse($response, $content_type);
 
     // Send the response.
     $this->sendResponse(2042);
