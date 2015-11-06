@@ -52,8 +52,12 @@
  *    - getSerialVersionForPid()
  *    - getContenTypeForPid()
  *
- * getChecksum()
- * listObjects()
+ * getChecksumForPid()
+ *    -> MNRead.getChecksum()
+ *
+ * getListOfObjectsForParameters()
+ *   -> MNRead.listObjects()
+ *
  * synchronizationFailed()
  * getReplica()
  *
@@ -232,6 +236,62 @@ class DataOneApiVersionOne extends DataOneApi {
   }
 
   /**
+   * Get the list of object PIDs given some optinal parameters.
+   *
+   * Get the log entries.
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNRead.listObjects
+   * @see _buildObjectInfo()
+   *
+   * @param integer $start
+   *   The index into the total result at which to start
+   *
+   * @param integer $max_count
+   *   The maximum number of records to return
+   *
+   * @param integer $from_date
+   *   The date from which results start formatted as the result of strtotime()
+   *
+   * @param integer $to_date
+   *   The date to which results end formatted as the result of strtotime()
+   *
+   * @param string $format_id
+   *   One of the values from DataOneApiVersionApi::getDataOneEventTypes()
+   *   Values here are validated when calling _buildObjectInfo()
+   *
+   * @param string $replica_status
+   *   Return only log records for identifiers that start with this string
+   *   Support for this parameter is optional and MAY be ignored with no warning.
+   *
+   * @return array
+   */
+  protected function getListOfObjectsForParameters($start, $max_count, $from_date, $to_date, $format_id, $replica_status) {
+
+    // Figure out given the parameters what records to report.
+    // May use _buildObjectInfo() to format the entries.
+    //
+    // Here's an example:
+    //
+    // $objects = array();
+    // $total_number_of_objects = $this->calculateTotalOfObjects($start, $max_count, $from_date, $to_date, $format_id, $replica_status);
+    // $query_results = $query-> ... add criteria to your query.. ->execute();
+    // foreach ($query_results as $result) {
+    //   $objects[] = _buildObjectInfo(..with parameters...);
+    // }
+    // $array_to_return = array(
+    //   'objects' => $objects,
+    //   'total' => $total_number_of_objects,
+    // );
+    // return $array_to_return;
+
+    return array(
+      // An array of items formatted with _buildObjectInfo().
+      'objects' => array(),
+      // The total number of log records satisfying the criteria.
+      'total' => -1,
+    );
+  }
+
+  /**
    * Alter the Member Node capabilities for function MNCore.getCapabilities().
    * Provides a way for extending classes to overrride
    * @see DataOneApiVersionOne::getCapabilities()
@@ -281,6 +341,24 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The array of elements for DataOneApiXml::addXmlWriterElements()
    */
   protected function alterSystemMetadata($pid, $elements) {
+    // By default, return the original array.
+    return $elements;
+  }
+
+  /**
+   * Alter the list of objects for function MNRead.listObject().
+   * Provides a way for extending classes to overrride
+   * @see DataOneApiVersionOne::listObjects()
+   * @see DataOneApiXml::addXmlWriterElements()
+   *
+   * @param array $elements
+   *   The content of the d1:objectList XML response
+   *
+   * @return array
+   *   The array of elements for DataOneApiXml::addXmlWriterElements()
+   */
+  protected function alterListObjects($elements) {
+    // By default, return the original array.
     return $elements;
   }
 
@@ -782,7 +860,7 @@ class DataOneApiVersionOne extends DataOneApi {
           ),
         ),
       );
-
+      // Add the entries.
       if (!empty($records['entries'])) {
         foreach ($records['entries'] as $idx => $entry) {
           $elements['d1:log']['_entry_' . $idx] = $entry;
@@ -1064,11 +1142,12 @@ class DataOneApiVersionOne extends DataOneApi {
 
       // Check that the API is live and accessible.
       // Passing the NotImplemented and ServiceFailure exception detail codes
-      // specific to MNCore.getCapabilities().
+      // specific to MNRead.getSystemMetadata().
       $this->checkOnlineStatus(1041, 1090);
 
       // Validate the session.
-      // The InvalidToken & NotAuthorized detail code specific to MNRead.get().
+      // InvalidToken & NotAuthorized detail code specific to
+      // MNRead.getSystemMetadata().
       $this->checkSession(1050, 1040);
 
       // The checksum algorithm.
@@ -1222,7 +1301,7 @@ class DataOneApiVersionOne extends DataOneApi {
       $this->checkOnlineStatus(1361, 1390);
 
       // Validate the session.
-      // The InvalidToken & NotAuthorized detail code specific to MNRead.describe().
+      // InvalidToken & NotAuthorized detail code specific to MNRead.describe().
       $this->checkSession(1370, 1360);
 
       // Put the headers to set in an array. THis provides a way for calls to
@@ -1293,11 +1372,12 @@ class DataOneApiVersionOne extends DataOneApi {
 
       // Check that the API is live and accessible.
       // Passing the NotImplemented and ServiceFailure exception detail codes
-      // specific to MNRead.describe().
+      // specific to MNRead.getChecksum().
       $this->checkOnlineStatus(1361, 1390);
 
       // Validate the session.
-      // The InvalidToken & NotAuthorized detail code specific to MNRead.describe().
+      // InvalidToken & NotAuthorized detail code specific to
+      // MNRead.getChecksum().
       $this->checkSession(1370, 1360);
 
       // Request query parameters, checked, validated and processed.
@@ -1338,17 +1418,90 @@ class DataOneApiVersionOne extends DataOneApi {
   /**
    * Implements DataONE MNRead.listObjects().
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNRead.listObjects
+   * @example https://dev.nceas.ucsb.edu/knb/d1/mn/v1/object
+  *
+   * Possible exceptions:
+   *
+   * Not Authorized
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotAuthorized
+   * @example DataOneApiVersionOne::throwNotAuthorized(1520, 'Not Authorized');
+   *
+   * Invalid Request
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.InvalidRequest
+   * @example DataOneApiVersionOne::throwInvalidRequest(1540, 'Invalid Request');
+   *
+   * Not Implemented
+   *   Raised if some functionality requested is not implemented. In the case of
+   *   an optional request parameter not being supported, the errorCode should
+   *   be 400. If the requested format (through HTTP Accept headers) is not
+   *   supported, then the standard HTTP 406 error code should be returned.
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotImplemented
+   * @example DataOneApiVersionOne::throwNotImplemented(1560, 'The API implementation is in development');
+   *
+   * Service Failure
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.ServiceFailure
+   * @example DataOneApiVersionOne::throwServiceFailure(1580, 'Failed');
+   *
+   * Invalid Token
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotImplemented
+   * @example DataOneApiVersionOne::throwNotImplemented(1530, 'Could not authenticate the session');
    */
   protected function listObjects() {
     // The response to send the client.
     $response = FALSE;
 
     try {
+      // Check that the API is live and accessible.
+      // Passing the NotImplemented and ServiceFailure exception detail codes
+      // specific to MNRead.listObjects().
+      $this->checkOnlineStatus(1560, 1580);
 
-      // Implementation should do something here.
-      if (!$response) {
-        DataOneApiVersionOne::throwNotImplemented(1521, 'listObjects() has not been implemented yet.');
+      // Validate the session.
+      // InvalidToken & NotAuthorized detail code specific MNRead.listObjects().
+      $this->checkSession(1530, 1460);
+
+      // Request query parameters, checked, validated and processed.
+      // Passing the InvalidRequest exception detail code.
+      $parameters = $this->getQueryParameters(1540);
+
+      // Possible parameters.
+      $from_date = !empty($parameters['fromDate']) ? $parameters['fromDate'] : FALSE;
+      $to_date = !empty($parameters['toDate']) ? $parameters['toDate'] : FALSE;
+      $format_id = !empty($parameters['formatId']) ? $parameters['formatId'] : FALSE;
+      $replica_status = !empty($parameters['replicaStatus']) ? $parameters['replicaStatus'] : FALSE;
+      $start = intval($parameters['start']);
+      $max_count = intval($parameters['count']);
+
+      // Get the appropriate log records.
+      // Allow extending classes an easier way to alter the results.
+      $records = $this->getListOfObjectsForParameters($start, $max_count, $from_date, $to_date, $format_id, $replica_status);
+
+      // Build the XML elements for the response.
+      $elements = array(
+        'd1:objectList' => array(
+          '_keys' => array(
+            'objectInfo' => '_object_',
+          ),
+          '_attrs' => array(
+            'xmlns:d1' => 'http://ns.dataone.org/service/types/v1',
+            'count' => count($records['objects']),
+            'start' => $start,
+            'total' => $records['total'],
+          ),
+        ),
+      );
+      // Add the objects.
+      if (!empty($records['objects'])) {
+        foreach ($records['objects'] as $idx => $object) {
+          $elements['d1:objectList']['_object_' . $idx] = $object;
+        }
       }
+
+      // Allow extending classes an easier way to alter the results.
+      $altered_elements = $this->alterListObjects($elements);
+      // Build the XML response.
+      $response = $this->getXml($altered_elements);
+
     }
     catch (DataOneApiVersionOneException $exc) {
       $response = $exc->generateErrorResponse();
@@ -2001,12 +2154,38 @@ class DataOneApiVersionOne extends DataOneApi {
         'access arguments' => array(DATAONE_API_VERSION_1),
         'function' => 'listObjects',
         'query_parameters' => array(
-          'fromDate' => array('required' => FALSE),
-          'toDate' => array('required' => FALSE),
-          'formatId' => array('required' => FALSE),
-          'replicaStatus' => array('required' => FALSE),
-          'start' => array('required' => FALSE, 'default_value' => 0),
-          'count' => array('required' => FALSE, 'default_value' => _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_MAX_OBJECT_COUNT, DATAONE_DEFAULT_MAX_OBJECT_RECORDS)),
+          'fromDate' => array(
+            'required' => FALSE,
+            'type' => 'date',
+            'max_cardinality' => 1,
+          ),
+          'toDate' => array(
+            'required' => FALSE,
+            'type' => 'date',
+            'max_cardinality' => 1,
+          ),
+          'formatId' => array(
+            'required' => FALSE,
+            'max_cardinality' => 1,
+          ),
+          'replicaStatus' => array(
+            'required' => FALSE,
+            'type' => 'boolean',
+            'max_cardinality' => 1,
+          ),
+          'start' => array(
+            'required' => FALSE,
+            'type' => 'integer',
+            'default_value' => 0,
+            'max_cardinality' => 1,
+          ),
+          'count' => array(
+            'required' => FALSE,
+            'type' => 'integer',
+            'default_value' => _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_MAX_OBJECT_COUNT, DATAONE_DEFAULT_MAX_OBJECT_RECORDS),
+            'max_cardinality' => 1,
+            'ceiling' => _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_MAX_OBJECT_COUNT, DATAONE_DEFAULT_MAX_OBJECT_RECORDS),
+          ),
         ),
       ),
       'MNRead.synchronizationFailed()' => array(
@@ -2067,7 +2246,7 @@ class DataOneApiVersionOne extends DataOneApi {
   /**
    * Build a log entry.
    *
-   * Called by getLogRecordsForParameters().
+   * Called by getLogRecordDataForParameters().
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.LogEntry
    *
    * @param string $entry_id
@@ -2124,6 +2303,50 @@ class DataOneApiVersionOne extends DataOneApi {
     }
 
     return $entry;
+  }
+
+  /**
+   * Build an object list.
+   *
+   * Called by getListObjectsForParameters().
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.ObjectList
+   *
+   * @param string $identifier
+   *   The identifier of the object related to this log entry.
+   *
+   * @param string $format_id
+   *   The format of the object
+   *   @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.ObjectFormatIdentifier
+   *
+   * @param string $checksum
+   *   The checksum of the object
+   *
+   * @param string $checksum_algorithm
+   *   THe checksum algorithm
+   *
+   * @param string $metadata_modified_date
+   *   Timestamp to be used by format_date() of the metadata's modified date
+   *   @see format_date()
+   *
+   * @param integer $size
+   *   The size of the object
+   *
+   * @return array
+   *   A log entry
+   */
+  protected function _buildObjectInfo($identifier, $format_id, $checksum, $checksum_algorithm, $metadata_modified_date, $size) {
+
+    // Build the entry.
+    return array(
+      'identifier' => $identifier,
+      'formatId' => $format_id,
+      'checksum' => array(
+        '_attrs' => array('algorithm' => $checksum_algorithm),
+        '_text' => $checksum,
+      ),
+      'dateSysMetadataModified' => format_date($metadata_modified_date, 'custom', 'Y-m-dTH:i:s'),
+      'size' => $size,
+    );
   }
 
   /**
