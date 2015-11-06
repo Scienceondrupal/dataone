@@ -245,6 +245,15 @@ function _dataone_build_api_version_form_fields(&$form_element, $weight = 10){
       '#weight' => 7,
     );
 
+    $checkums_algorithm = _dataone_get_variable_name($version_id, DATAONE_VARIABLE_API_CHECKSUM_ALGORITHM);
+    $form_element[$version_id][$checkums_algorithm]  = array(
+      '#type' => 'select',
+      '#title' => t('Which checksum algorithm should be the default.'),
+      '#options' => _dataone_admin_checksum_algorithm_options(),
+      '#default_value' => _dataone_get_variable($version_id, DATAONE_VARIABLE_API_CHECKSUM_ALGORITHM, DATAONE_DEFAULT_CHECKSUM_ALGORITHM),
+      '#weight' => 10,
+    );
+
     $max_log_count = _dataone_get_variable_name($version_id, DATAONE_VARIABLE_API_MAX_LOG_COUNT);
     $form_element[$version_id][$max_log_count] = array(
       '#type' => 'textfield',
@@ -253,15 +262,15 @@ function _dataone_build_api_version_form_fields(&$form_element, $weight = 10){
       '#default_value' => _dataone_get_variable($version_id, DATAONE_VARIABLE_API_MAX_LOG_COUNT, DATAONE_DEFAULT_MAX_LOG_RECORDS),
       '#element_validate' => array('element_validate_integer_positive'),
       '#size' => 5,
-      '#weight' => 10,
+      '#weight' => 13,
     );
 
     $max_object_count = _dataone_get_variable_name($version_id, DATAONE_VARIABLE_API_MAX_OBJECT_COUNT);
-    $form_element[$version_id][$max_log_count] = array(
+    $form_element[$version_id][$max_object_count] = array(
       '#type' => 'textfield',
       '#title' => t('Maximum number of object entries to return.'),
       '#description' => t('Cap the number of entires the listObjects() method of the DataONE Member Node API can request. Defaults to %default records.', array('%default' => DATAONE_DEFAULT_MAX_OBJECT_RECORDS)),
-      '#default_value' => _dataone_get_variable($version_id, DATAONE_VARIABLE_API_MAX_OBJECT_COUNT, DATAONE_DEFAULT_MAX_LOG_RECORDS),
+      '#default_value' => _dataone_get_variable($version_id, DATAONE_VARIABLE_API_MAX_OBJECT_COUNT, DATAONE_DEFAULT_MAX_OBJECT_RECORDS),
       '#element_validate' => array('element_validate_integer_positive'),
       '#size' => 5,
       '#weight' => 15,
@@ -295,7 +304,7 @@ function _dataone_admin_online_options() {
  * Get the possible Member Node Online Replication options.
  *
  * @return array
- *   Associative array of accepted values for a Member Node's Replication status.
+ *   Associative array of accepted values for a Member Node's Replication status
  */
 function _dataone_admin_replicate_options() {
   $options = &drupal_static(__FUNCTION__);
@@ -313,7 +322,7 @@ function _dataone_admin_replicate_options() {
  * Get the possible Member Node Online Synchronize options.
  *
  * @return array
- *   Associative array of accepted values for a Member Node's Synchronize status.
+ *   Associative array of accepted values for a Member Node's Synchronize status
  */
 function _dataone_admin_synchronize_options() {
   $options = &drupal_static(__FUNCTION__);
@@ -328,10 +337,24 @@ function _dataone_admin_synchronize_options() {
 }
 
 /**
+ * Get the possible Member Node checksum algorithm options.
+ *
+ * @return array
+ *   Associative array of accepted values for a Member Node's checksum algorithm
+ */
+function _dataone_admin_checksum_algorithm_options() {
+  $options = array(
+    'MD5'
+  );
+  return drupal_map_assoc($options);
+
+}
+
+/**
  * Get the DataONE API Version options.
  *
  * @return array
- *   Associative array of API versions a site can implement.
+ *   Associative array of API versions a site can implement
  */
 function _dataone_admin_version_options() {
 

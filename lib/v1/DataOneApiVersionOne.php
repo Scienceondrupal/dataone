@@ -30,7 +30,6 @@
  *    - getFormatIdForPid()
  *    - getByteSizeForPid()
  *    - getChecksumForPid()
- *    - getChecksumAlgorithmForPid()
  *    - getSubmitterForPid()
  *    - getRightsHolderForPid()
  *    - getAccessPoliciesForPid()
@@ -50,7 +49,6 @@
  *    - getByteSizeForPid()
  *    - getFormatIdForPid()
  *    - getChecksumForPid()
- *    - getChecksumAlgorithmForPid()
  *    - getSerialVersionForPid()
  *    - getContenTypeForPid()
  *
@@ -331,8 +329,9 @@ class DataOneApiVersionOne extends DataOneApi {
     $format_id = $this->getFormatIdForPid($pid);
     $describe_headers['DataONE-formatId'] =  $format_id;
     // The checksum data.
-    $checksum = $this->getChecksumForPid($pid);
-    $checksum_algorithm = $this->getChecksumAlgorithmForPid($pid);
+    $algorithm = _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_CHECKSUM_ALGORITHM);
+    $checksum = $this->getChecksumForPid($pid, $algorithm);
+
     $describe_headers['DataONE-Checksum'] =  $checksum_algorithm . ',' . $checksum;
     // The Serial version.
     $servial_version = $this->getSerialVersionForPid($pid);
@@ -394,24 +393,8 @@ class DataOneApiVersionOne extends DataOneApi {
    * @return string
    *   The checksum of the object
    */
-  public function getChecksumForPid($pid) {
-    watchdog('dataone', 'call to getChecksumForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
-    return 'unknown';
-  }
-
-  /**
-   * Get the checksum algorithm used for the object identified by the given PID.
-   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.ChecksumAlgorithm
-   * @see http://id.loc.gov/vocabulary/preservation/cryptographicHashFunctions.html
-   *
-   * @param mixed $pid
-   *   The result of loadPid()
-   *
-   * @return string
-   *   The checksum algorithm
-   */
-  public function getChecksumAlgorithmForPid($pid) {
-    watchdog('dataone', 'call to getChecksumAlgorithmForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+  public function getChecksumForPid($pid, $algorithm) {
+    watchdog('dataone', 'call to getChecksumForPid(@pid, @algorithm) should be made by an implementing class', array('@pid' => $pid, 'algorithm' => $algorithm), WATCHDOG_ERROR);
     return 'unknown';
   }
 
@@ -858,7 +841,7 @@ class DataOneApiVersionOne extends DataOneApi {
           'identifier' => _dataone_get_member_node_identifier(TRUE),
           'name' => _dataone_get_member_node_name(),
           'description' => _dataone_get_member_node_description(),
-          'baseURL' => _dataone_get_member_node_endpoint(TRUE),
+          'baseURL' => _dataone_get_member_node_endpoint(DATAONE_API_VERSION_1, TRUE),
           'services' => array(
             '_keys' => array('service' => '_service'),
             '_service0' => array(
@@ -1051,6 +1034,9 @@ class DataOneApiVersionOne extends DataOneApi {
       // The InvalidToken & NotAuthorized detail code specific to MNRead.get().
       $this->checkSession(1050, 1040);
 
+      // The checksum algorithm.
+      $algorithm = _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_CHECKSUM_ALGORITHM);
+
       $elements = array(
         'd1:systemMetadata' => array(
           '_attrs' => array(
@@ -1062,9 +1048,9 @@ class DataOneApiVersionOne extends DataOneApi {
           'size' => $this->getByteSizeForPid($pid),
           'checksum' => array(
             '_attrs' => array(
-              'algorithm' => $this->getChecksumAlgorithmForPid($pid),
+              'algorithm' => $algorithm,
             ),
-            '_text' => $this->getChecksumForPid($pid),
+            '_text' => $this->getChecksumForPid($pid, $algorithm),
           ),
           'submitter' => $this->getSubmitterForPid($pid),
           'rightsHolder' => $this->getRightsHolderForPid($pid),
@@ -1227,16 +1213,92 @@ class DataOneApiVersionOne extends DataOneApi {
   /**
    * Implements DataONE MNRead.getChecksum().
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNRead.getChecksum
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.Checksum
+   * @example https://dev.nceas.ucsb.edu/knb/d1/mn/v1/checksum/0e945ef6-48e1-433c-9962-e7cebb6b9ebd
+   *
+   * Possible exceptions:
+   *
+   * Not Authorized
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotAuthorized
+   * @example DataOneApiVersionOne::throwNotAuthorized(1400, 'Not authorized to read the object.');
+   *
+   * Not Found
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotFound
+   * @example DataOneApiVersionOne::throwNotFound(1420, 'Object not found.');
+   *
+   * Invalid Request
+   *    A supplied parameter was invalid, most likely an unsupported checksum
+   *    algorithm was specified, in which case the error message should include
+   *    an enumeration of supported checksum algorithms.
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.InvalidRequest
+   * @example DataOneApiVersionOne::throwInvalidRequest(1402, 'Invalid Request');
+   *
+   * Service Failure
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.ServiceFailure
+   * @example DataOneApiVersionOne::throwServiceFailure(1410, 'Failed.');
+   *
+   * Invalid Token
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.InvalidToken
+   * @example DataOneApiVersionOne::throwInvalidToken(1430, 'The session is invalid.');
+   *
+   * Not Implemented
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotImplemented
+   * @example DataOneApiVersionOne::throwNotImplemented(1401, 'The API implementation is in development');
+   *
+   * @param mixed $pid
+   *   The result of loadPid()
    */
-  protected function getChecksum() {
+  protected function getChecksum($pid) {
     // The response to send the client.
     $response = FALSE;
     try {
 
-      // Implementation should do something here.
-      if (!$response) {
-        DataOneApiVersionOne::throwNotImplemented(1401, 'getChecksum() has not been implemented yet.');
+      // Check that the API is live and accessible.
+      // Passing the NotImplemented and ServiceFailure exception detail codes
+      // specific to MNRead.describe().
+      $this->checkOnlineStatus(1361, 1390);
+
+      // Validate the session.
+      // The InvalidToken & NotAuthorized detail code specific to MNRead.describe().
+      $this->checkSession(1370, 1360);
+
+      // Request query parameters, checked, validated and processed.
+      // Passing the InvalidRequest exception detail code.
+      $parameters = $this->getQueryParameters(1402);
+
+      // Possible parameters.
+      $algorithm = $parameters['checksumAlgorithm'];
+
+      // Get the checksum.
+      // Allow extending classes an easier way to alter the results.
+      $checksum = $this->getChecksumForPid($pid, $algorithm);
+
+      // Build the XML elements for the response.
+      $elements = array(
+        'd1:log' => array(
+          '_keys' => array(
+            'logEntry' => '_entry_',
+          ),
+          '_attrs' => array(
+            'xmlns:d1' => 'http://ns.dataone.org/service/types/v1',
+            'count' => count($records['entries']),
+            'start' => $start,
+            'total' => $records['total'],
+          ),
+        ),
+      );
+
+      if (!empty($records['entries'])) {
+        foreach ($records['entries'] as $idx => $entry) {
+          $elements['d1:log']['_entry_' . $idx] = $entry;
+        }
       }
+
+      // Allow extending classes an easier way to alter the results.
+      $altered_elements = $this->alterGetLogRecords($elements);
+      // Build the XML response.
+      $response = $this->getXml($altered_elements);
+
     }
     catch (DataOneApiVersionOneException $exc) {
       $response = $exc->generateErrorResponse();
@@ -1901,7 +1963,7 @@ class DataOneApiVersionOne extends DataOneApi {
         'function' => 'getChecksum',
         'arguments' => array(1 => 'pid'),
         'query_parameters' => array(
-          'checksumAlgorithm' => array('required' => FALSE),
+          'checksumAlgorithm' => array('required' => FALSE, 'default_value' => _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_CHECKSUM_ALGORITHM)),
         ),
       ),
       'MNRead.listObjects()' => array(

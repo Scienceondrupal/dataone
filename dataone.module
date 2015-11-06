@@ -25,8 +25,10 @@ define('DATAONE_VARIABLE_API_SYNC_WDAY', 'dataone_mn_api_sync_wday_');
 define('DATAONE_VARIABLE_API_SYNC_YEAR', 'dataone_mn_api_sync_year_');
 define('DATAONE_VARIABLE_API_MAX_LOG_COUNT', 'dataone_mn_api_log_count_');
 define('DATAONE_VARIABLE_API_MAX_OBJECT_COUNT', 'dataone_mn_api_object_count_');
+define('DATAONE_VARIABLE_API_CHECKSUM_ALGORITHM', 'dataone_mn_api_checksum_algorithm_');
 define('DATAONE_DEFAULT_MAX_LOG_RECORDS', '50');
 define('DATAONE_DEFAULT_MAX_OBJECT_RECORDS', '50');
+define('DATAONE_DEFAULT_CHECKSUM_ALGORITHM', 'MD5');
 define('DATAONE_CN_STAGING_ENDPOINT', '');
 define('DATAONE_CN_PRODUCTION_ENDPOINT', '');
 define('DATAONE_URL_CRON_EXPRESSION', 'https://en.wikipedia.org/wiki/Cron#CRON_expression');
@@ -105,7 +107,7 @@ function dataone_menu() {
     }
 
     // The API endpoint path for this version.
-    $endpoint = _dataone_get_member_node_endpoint();
+    $endpoint = _dataone_get_member_node_endpoint($version_id);
     // Figure out how many parts are in the endpoint path.
     // This info will be used for defining where page arguments are located.
     $endpoint_parts = count(explode('/', $endpoint));
@@ -297,18 +299,10 @@ function _dataone_get_member_node_identifier($full_identifier = FALSE) {
 }
 
 /**
- * Get the base URL of the member node.
- *
- * @return string
- *   The base URL
- */
-function _dataone_get_base_url() {
-  global $base_url;
-
-  return $base_url . '/';
-}
-/**
  * Get the endpoint URL of this Member Node.
+ *
+ * @param string $version
+ *   The version of the DataONE API
  *
  * @param BOOL $full_url
  *   Whether to get the full URL or just the changeable endpoint
@@ -316,8 +310,8 @@ function _dataone_get_base_url() {
  * @return string
  *   The Member Node identifier
  */
-function _dataone_get_member_node_endpoint($full_url = FALSE) {
-  $endpoint = _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_ENDPOINT);
+function _dataone_get_member_node_endpoint($version, $full_url = FALSE) {
+  $endpoint = _dataone_get_variable($version, DATAONE_VARIABLE_API_ENDPOINT);
   return $full_url ? _dataone_get_base_url() . $endpoint : $endpoint;
 }
 
@@ -348,6 +342,7 @@ function _dataone_get_member_node_subjects($format_array = FALSE) {
   }
   return $subject;
 }
+
 /**
  * Get the defined member node description for this Drupal site.
  *
@@ -356,4 +351,16 @@ function _dataone_get_member_node_subjects($format_array = FALSE) {
  */
 function _dataone_get_member_node_description() {
   return variable_get(DATAONE_VARIABLE_API_DESCRIPTION, 'A DataONE member node implemented in Drupal.');
+}
+
+/**
+ * Get the base URL of the member node.
+ *
+ * @return string
+ *   The base URL
+ */
+function _dataone_get_base_url() {
+  global $base_url;
+
+  return $base_url . '/';
 }
