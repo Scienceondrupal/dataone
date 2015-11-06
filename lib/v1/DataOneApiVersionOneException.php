@@ -138,7 +138,6 @@ class DataOneApiVersionOneException extends DataOneApiException {
   public function generateErrorResponse() {
 
     $error_code = $this->getErrorCode();
-    drupal_add_http_header('Status', $error_code);
 
     $xml = DataOneApiXml::generateXmlWriter();
     $elements = array(
@@ -158,6 +157,26 @@ class DataOneApiVersionOneException extends DataOneApiException {
 
     DataOneApiXml::addXmlWriterElements($xml, $elements);
     return DataOneApiXml::printXmlWriter($xml);
+  }
+
+  /**
+   * Get the HTTP response headers for a MNRead.describe() exception.
+   *
+   * @param string $pid_request_parameter
+   *   The PID form the request parameter
+   *
+   * @return array
+   *   The array of HTTP response headers
+   */
+  public function getDescribeHeaders($pid_request_parameter) {
+    return array(
+      'Content-Type' => 'text/xml',
+      'Status' => $this->getErrorCode(),
+      'DataONE-Exception-Name' => $this->getErrorName(),
+      'DataONE-Exception-DetailCode' => $this->getDetailCode(),
+      'DataONE-Exception-Description' => $this->getDescription(),
+      'DataONE-Exception-PID' => $pid_request_parameter,
+    );
   }
 
   // Custom string representation of object.
