@@ -1419,7 +1419,7 @@ class DataOneApiVersionOne extends DataOneApi {
    * Implements DataONE MNRead.listObjects().
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNRead.listObjects
    * @example https://dev.nceas.ucsb.edu/knb/d1/mn/v1/object
-  *
+   *
    * Possible exceptions:
    *
    * Not Authorized
@@ -1516,23 +1516,57 @@ class DataOneApiVersionOne extends DataOneApi {
   /**
    * Implements DataONE MNRead.synchronizationFailed().
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNRead.synchronizationFailed
+   *
+   * Possible exceptions:
+   *
+   * Not Implemented
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotImplemented
+   * @example DataOneApiVersionOne::throwNotImplemented(2160, 'The API implementation is in development');
+   *
+   * Service Failure
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.ServiceFailure
+   * @example DataOneApiVersionOne::throwServiceFailure(2161, 'Failed');
+   *
+   * Not Authorized
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotAuthorized
+   * @example DataOneApiVersionOne::throwNotAuthorized(2162, 'Not Authorized');
+   *
+   * Invalid Token
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotImplemented
+   * @example DataOneApiVersionOne::throwNotImplemented(2164, 'Could not authenticate the session');
    */
   protected function synchronizationFailed() {
     // The response to send the client.
-    $response = FALSE;
-
+    // This response sends a Boolean as a string of the body. Assume false.
+    $response = DATAONE_API_FALSE_STRING;
+    $content_type = 'text/plain';
     try {
 
-      // Implementation should do something here.
-      if (!$response) {
-        DataOneApiVersionOne::throwNotImplemented(2160, 'synchronizationFailed() has not been implemented yet.');
-      }
+            // Check that the API is live and accessible.
+      // Passing the NotImplemented and ServiceFailure exception detail codes
+      // specific to MNRead.listObjects().
+      $this->checkOnlineStatus(2160, 2161);
+
+      // Validate the session.
+      // InvalidToken & NotAuthorized detail code specific MNRead.listObjects().
+      //$this->checkSession(2164, 2162);
+
+      // @see http://php.net/manual/en/features.file-upload.php
+      $message = $_FILES['message'];
+
+      $this->setResponseHeader('D1-MESSAGE-KEYS', implode('; ', array_keys($message)));
+      $this->setResponseHeader('D1-MESSAGE-VALUES', implode('; ', array_values($message)));
+
+      DataOneApiVersionOne::throwNotImplemented(9999, 'params', array('params' => implode(';', $parameters)));
+
+      $response = DATAONE_API_TRUE_STRING;
     }
     catch (DataOneApiVersionOneException $exc) {
       $response = $exc->generateErrorResponse();
+      $content_type = 'application/xml';
     }
 
-    $this->setResponse($response);
+    $this->setResponse($response, $content_type);
 
     // Send the response.
     $this->sendResponse(2161);
@@ -1570,12 +1604,14 @@ class DataOneApiVersionOne extends DataOneApi {
     $pid = $args[0];
     // Figure out which HTTP method was used.
     switch($_SERVER['REQUEST_METHOD']) {
-      case 'GET':
-        $this->get($pid);
-        break;
-
       case 'HEAD':
         $this->describe($pid);
+        break;
+
+      case 'GET':
+      // A default so some function can return detail code exceptions.
+      default:
+        $this->get($pid);
         break;
     }
 
@@ -1866,6 +1902,33 @@ class DataOneApiVersionOne extends DataOneApi {
       case DATAONE_API_STATUS_OFF:
       default:
         DataOneApiVersionOne::throwServiceFailure($service_failure_code, 'The API has been turned offline. Please try again later.');
+    }
+
+    // Was the correct request method used?
+    $bad_request = TRUE;
+    // The method of this request.
+    $request_method = !empty($_SERVER['REQUEST_METHOD']) ? strtoupper($_SERVER['REQUEST_METHOD']) : 'GET';
+    //Check the configuration for appropriate methods.
+    $path_config = $this->getPathConfig();
+    if (!empty($path_config['method'])) {
+      foreach ($path_config['method'] as $method => $function) {
+        if (strtoupper($method) == $request_method) {
+          $bad_request = FALSE;
+          break;
+        }
+      }
+    }
+    // If no configured methods, assume 'GET'.
+    elseif ($request_method == 'GET') {
+      // Set path_config method in case of exception, it can be reported.
+      $path_config['method'] = array('GET' => current_path());
+      $bad_request = FALSE;
+    }
+
+    // Throw NotImplemented if bad request method.
+    if ($bad_request) {
+      $msg = t('The request method is not implemented for this service: !method', array('!method' => $request_method));
+      DataOneApiVersionOne::throwNotImplemented($not_implemented_code, $msg, array('accepted methods' => implode(',', array_keys($path_config['method']))));
     }
   }
 

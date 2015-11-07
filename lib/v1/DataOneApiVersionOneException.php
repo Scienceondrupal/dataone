@@ -116,17 +116,19 @@ class DataOneApiVersionOneException extends DataOneApiException {
     if (!$this->hasTraceInformation()) {
       return $no_results;
     }
+    $trace_info = $this->getTraceInformation();
     $trace = $prefix;
-    $last_key = end(array_keys($trace_info));
+    $trace_keys = array_keys($trace_info);
+    $last_key = end($trace_keys);
     foreach ($trace_info as $key => $value) {
-      $str .= $element_prefix . $key . $element_delimeter . $value . $element_suffix;
+      $trace .= $element_prefix . $key . $element_delimeter . $value . $element_suffix;
       if ($last_key == $key) {
-        $str .= $delimeter;
+        $trace .= $delimeter;
       }
     }
-    $str .= $suffix;
+    $trace .= $suffix;
 
-    return $str;
+    return $trace;
   }
 
   /**
