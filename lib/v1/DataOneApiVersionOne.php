@@ -1099,6 +1099,9 @@ class DataOneApiVersionOne extends DataOneApi {
       // Allow extending classes an easier way to alter the results.
       $response = $this->getObjectForStreaming($pid);
 
+      // Announce the replication event.
+      module_invoke_all('dataone_event', 'read', $pid);
+
       // Implementation should do something here.
       if (!$response) {
         DataOneApiVersionOne::throwNotImplemented(1001, 'get() has not been implemented yet.');
@@ -1645,27 +1648,87 @@ class DataOneApiVersionOne extends DataOneApi {
   /**
    * Implements DataONE MNRead.getReplica().
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNRead.getReplica
+   * @see readfile()
+   *
+   * Response should be a URI valid for passing to readfile().
+   * @example: $response = 'public://some data file';
+   * @example: $response = 'http://example.com/some-resource';
+   *
+   * Possible exceptions:
+   *
+   * Service Failure
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.ServiceFailure
+   * @example DataOneApiVersionOne::throwServiceFailure(2181, 'Failed.');
+   *
+   * Not Authorized
+   *   The provided identity does not have READ permission on the object.
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotAuthorized
+   * @example DataOneApiVersionOne::throwNotAuthorized(2182, 'Not authorized to read the object.');
+   *
+   * Not Implemented
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotImplemented
+   * @example DataOneApiVersionOne::throwNotImplemented(2180, 'The API implementation is in development');
+   *
+   * Invalid Token
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.InvalidToken
+   * @example DataOneApiVersionOne::throwInvalidToken(2183, 'The session is invalid.');
+   *
+   * Insufficient Resources
+   *   The node is unable to service the request due to insufficient resources
+   *   such as CPU, memory, or bandwidth being over utilized.
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.InsufficientResources
+   * @example: DataOneApiVersionOne::throwInsufficientResources(2184, 'Insufficient Resources');
+   *
+   * Not Found
+   *   The object specified by pid does not exist at this node. The description
+   *   should include a reference to the resolve method.
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Exceptions.html#Exceptions.NotFound
+   * @example DataOneApiVersionOne::throwNotFound(2185, 'Object not found.');
+   *
+   * @param mixed $pid
+   *   The result of loadPid()
    */
-  protected function getReplica() {
+  protected function getReplica($pid) {
     // The response to send the client.
     $response = FALSE;
-
+    // The content-type of the object.
+    $content_type = $this->getContenTypeForPid($pid);
+    $stream_response = TRUE;
     try {
+      // Check that the API is live and accessible.
+      // Passing the NotImplemented and ServiceFailure exception detail codes
+      // specific to MNRead.get().
+      $this->checkOnlineStatus(2180, 2181);
+
+      // Validate the session.
+      // The InvalidToken & NotAuthorized detail code specific to MNRead.get().
+      $this->checkSession(2183, 2182);
+
+      // Setup the response.
+      // Allow extending classes an easier way to alter the results.
+      $response = $this->getObjectForStreaming($pid);
+
+      // Announce the replication event.
+      module_invoke_all('dataone_event', 'replicate', $pid);
 
       // Implementation should do something here.
       if (!$response) {
         DataOneApiVersionOne::throwNotImplemented(2180, 'getReplica() has not been implemented yet.');
       }
+
     }
     catch (DataOneApiVersionOneException $exc) {
       watchdog('dataone', $exc->__toString(), array(), $exc->getWatchdogCode());
       $response = $exc->generateErrorResponse();
+      $this->setResponseHeader('Status', $exc->getErrorCode());
+      $content_type = 'application/xml';
+      $stream_response = FALSE;
     }
 
-    $this->setResponse($response);
+    $this->setResponse($response, $content_type);
 
     // Send the response.
-    $this->sendResponse(2181);
+    $this->sendResponse(2181, array(), $stream_response);
   }
 
   /**
@@ -2507,6 +2570,9 @@ class DataOneApiVersionOne extends DataOneApi {
         DataOneApiVersionOne::throwServiceFailure(2161, 'Could not read the XML exception file due to Member Node issues.');
       }
 
+      // Announce the replication event.
+      module_invoke_all('dataone_event', 'synchronization_failed');
+
       // Allow extending classes an easier way to handle the exception.
       $this->handleSyncFailed($exc);
     }
@@ -2528,6 +2594,7 @@ class DataOneApiVersionOne extends DataOneApi {
       DATAONE_API_FALSE_STRING,
     );
   }
+
   /**
    * Get the possible values for a DataONE Event type.
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.Event

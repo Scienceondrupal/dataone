@@ -11,6 +11,25 @@
 abstract class DataOneApi {
 
   /**
+   * Get the possible values for a DataONE Event type.
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.Event
+   *
+   * @return array
+   *   The event types as strings
+   */
+  static public function getDataOneEventTypes() {
+    return array(
+      'create',
+      'read',
+      'update',
+      'delete',
+      'replicate',
+      'synchronization_failed',
+      'replication_failed',
+    );
+  }
+
+  /**
    * Get information about the API paths.
    *
    * @return array
