@@ -58,7 +58,9 @@
  * getListOfObjectsForParameters()
  *   -> MNRead.listObjects()
  *
- * synchronizationFailed()
+ * handleSyncFailed()
+ *   -> synchronizationFailed()
+ *
  * getReplica()
  *
  * === NOTES ===
@@ -725,6 +727,20 @@ class DataOneApiVersionOne extends DataOneApi {
   }
 
   /**
+   * Handle a synchronizationFailed() call from a Coordinating Node (CN).
+   *
+   * @param DataOneApiVersionOneException $exc
+   *   The exception thrown by the CN
+   *
+   * @return BOOL
+   *   Either TRUE or FALSE
+   */
+  public function handleSyncFailed($exc) {
+    watchdog('dataone', 'call to handleSyncFailed(@exc) should be made by an implementing class', array('@exc' => $exc), WATCHDOG_NOTICE);
+    return FALSE;
+  }
+
+  /**
    * Implements DataONE MNCore.ping().
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNCore.ping
    * @example https://dev.nceas.ucsb.edu/knb/d1/mn/v1/monitor/ping
@@ -873,6 +889,7 @@ class DataOneApiVersionOne extends DataOneApi {
       $response = $this->getXml($altered_elements);
     }
     catch (DataOneApiVersionOneException $exc) {
+      watchdog('dataone', $exc->__toString(), array(), $exc->getWatchdogCode());
       $response = $exc->generateErrorResponse();
       $this->setResponseHeader('Status', $exc->getErrorCode());
     }
@@ -1004,6 +1021,7 @@ class DataOneApiVersionOne extends DataOneApi {
       $response = $this->getXml($altered_elements);
     }
     catch (DataOneApiVersionOneException $exc) {
+      watchdog('dataone', $exc->__toString(), array(), $exc->getWatchdogCode());
       $response = $exc->generateErrorResponse();
       $this->setResponseHeader('Status', $exc->getErrorCode());
     }
@@ -1088,6 +1106,7 @@ class DataOneApiVersionOne extends DataOneApi {
 
     }
     catch (DataOneApiVersionOneException $exc) {
+      watchdog('dataone', $exc->__toString(), array(), $exc->getWatchdogCode());
       $response = $exc->generateErrorResponse();
       $this->setResponseHeader('Status', $exc->getErrorCode());
       $content_type = 'application/xml';
@@ -1249,6 +1268,7 @@ class DataOneApiVersionOne extends DataOneApi {
       $response = $this->getXml($altered_elements);
     }
     catch (DataOneApiVersionOneException $exc) {
+      watchdog('dataone', $exc->__toString(), array(), $exc->getWatchdogCode());
       $response = $exc->generateErrorResponse();
       $this->setResponseHeader('Status', $exc->getErrorCode());
     }
@@ -1316,6 +1336,7 @@ class DataOneApiVersionOne extends DataOneApi {
       $response = '';
     }
     catch (DataOneApiVersionOneException $exc) {
+      watchdog('dataone', $exc->__toString(), array(), $exc->getWatchdogCode());
       $pid_request_parameter = $this::getMenuPathArgument(0, strval($pid));
       $headers = $exc->getDescribeHeaders($pid_request_parameter);
       $this->setResponseHeaders($headers);
@@ -1405,6 +1426,7 @@ class DataOneApiVersionOne extends DataOneApi {
 
     }
     catch (DataOneApiVersionOneException $exc) {
+      watchdog('dataone', $exc->__toString(), array(), $exc->getWatchdogCode());
       $response = $exc->generateErrorResponse();
       $this->setResponseHeader('Status', $exc->getErrorCode());
     }
@@ -1504,6 +1526,7 @@ class DataOneApiVersionOne extends DataOneApi {
 
     }
     catch (DataOneApiVersionOneException $exc) {
+      watchdog('dataone', $exc->__toString(), array(), $exc->getWatchdogCode());
       $response = $exc->generateErrorResponse();
     }
 
@@ -1516,6 +1539,9 @@ class DataOneApiVersionOne extends DataOneApi {
   /**
    * Implements DataONE MNRead.synchronizationFailed().
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNRead.synchronizationFailed
+   *
+   * A successful response is indicated by a HTTP 200 status. An unsuccessful
+   * call is indicated by returing the appropriate exception.
    *
    * Possible exceptions:
    *
@@ -1538,30 +1564,74 @@ class DataOneApiVersionOne extends DataOneApi {
   protected function synchronizationFailed() {
     // The response to send the client.
     // This response sends a Boolean as a string of the body. Assume false.
-    $response = DATAONE_API_FALSE_STRING;
+    $response = DATAONE_API_TRUE_STRING;
     $content_type = 'text/plain';
     try {
 
-            // Check that the API is live and accessible.
+      // Check that the API is live and accessible.
       // Passing the NotImplemented and ServiceFailure exception detail codes
       // specific to MNRead.listObjects().
       $this->checkOnlineStatus(2160, 2161);
 
       // Validate the session.
       // InvalidToken & NotAuthorized detail code specific MNRead.listObjects().
-      //$this->checkSession(2164, 2162);
+      $this->checkSession(2164, 2162);
 
       // @see http://php.net/manual/en/features.file-upload.php
       $message = $_FILES['message'];
 
-      $this->setResponseHeader('D1-MESSAGE-KEYS', implode('; ', array_keys($message)));
-      $this->setResponseHeader('D1-MESSAGE-VALUES', implode('; ', array_values($message)));
+      // Handle any known file upload errors.
+      if (is_array($message['error']) && !empty($message['error'])) {
+        foreach ($message['error'] as $key => $error) {
+          switch($error) {
 
-      DataOneApiVersionOne::throwNotImplemented(9999, 'params', array('params' => implode(';', $parameters)));
+            case UPLOAD_ERR_INI_SIZE:
+              DataOneApiVersionOne::throwServiceFailure(2161, 'The exception file exceeds allowed file size for uploads on this Member Node.', array('error' => 'UPLOAD_ERR_INI_SIZE'));
+              break;
 
-      $response = DATAONE_API_TRUE_STRING;
+            case UPLOAD_ERR_FORM_SIZE:
+              DataOneApiVersionOne::throwServiceFailure(2161, 'The exception file exceeds allowed file size for uploads on this Member Node.', array('error' => 'UPLOAD_ERR_FORM_SIZE'));
+              break;
+
+            case UPLOAD_ERR_PARTIAL:
+              DataOneApiVersionOne::throwServiceFailure(2161, 'The exception file was only partially uploaded.', array('error' => 'UPLOAD_ERR_PARTIAL'));
+              break;
+
+            case UPLOAD_ERR_NO_FILE:
+              DataOneApiVersionOne::throwServiceFailure(2161, 'The exception file was not uploaded.', array('error' => 'UPLOAD_ERR_NO_FILE'));
+              break;
+
+            case UPLOAD_ERR_NO_TMP_DIR:
+              DataOneApiVersionOne::throwServiceFailure(2161, 'There is not temporary file directory for uplaoded files for this Member Node.', array('error' => 'UPLOAD_ERR_NO_TMP_DIR'));
+              break;
+
+            case UPLOAD_ERR_CANT_WRITE:
+              DataOneApiVersionOne::throwServiceFailure(2161, 'The exception file could not be written to disk on this Member Node.', array('error' => 'UPLOAD_ERR_CANT_WRITE'));
+              break;
+
+            case UPLOAD_ERR_EXTENSION:
+              DataOneApiVersionOne::throwServiceFailure(2161, 'An unknown error stopped the uploading of this exception for this Member Node.', array('error' => 'UPLOAD_ERR_EXTENSION'));
+              break;
+
+            case UPLOAD_ERR_OK:
+            default:
+
+              $this->_processSyncFailedMessage($message);
+              break;
+          }
+        }
+      }
+      // If the uplaoded file has a 'tmp_name', then we have a valid upload.
+      elseif (!empty($message['tmp_name'])) {
+        $this->_processSyncFailedMessage($message);
+      }
+      // Couldn't find an uploaded exception.
+      else {
+        DataOneApiVersionOne::throwServiceFailure(2161, 'The exception file was not uploaded.');
+      }
     }
     catch (DataOneApiVersionOneException $exc) {
+      watchdog('dataone', $exc->__toString(), array(), $exc->getWatchdogCode());
       $response = $exc->generateErrorResponse();
       $content_type = 'application/xml';
     }
@@ -1588,6 +1658,7 @@ class DataOneApiVersionOne extends DataOneApi {
       }
     }
     catch (DataOneApiVersionOneException $exc) {
+      watchdog('dataone', $exc->__toString(), array(), $exc->getWatchdogCode());
       $response = $exc->generateErrorResponse();
     }
 
@@ -2411,6 +2482,39 @@ class DataOneApiVersionOne extends DataOneApi {
       'size' => $size,
     );
   }
+
+  /**
+   * Process a file upload for synchronizationFailed().
+   *
+   * @param array $message
+   *   The $_FILES index to the Exception being thrown by the Coordinating Node.
+   */
+  protected function _processSyncFailedMessage($message) {
+    try {
+      // Get a filename for the Exception.
+      $upload_dir = _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_SYNC_FAILED_DIR);
+      $upload_file = $upload_dir .'/' . basename(time()) . '.xml';
+      $xml_file = file_unmanaged_move($message['tmp_name'], $upload_file, FILE_EXISTS_RENAME);
+      // Could the exception be saved to disk?
+      if (!$xml_file) {
+        DataOneApiVersionOne::throwServiceFailure(2161, 'Could not save the XML exception file.');
+      }
+
+      // Parse the xml file.
+      $xml_file_path = drupal_realpath($xml_file);
+      $exc = DataOneApiVersionOneException::readException($xml_file_path);
+      if (!is_object($exc)) {
+        DataOneApiVersionOne::throwServiceFailure(2161, 'Could not read the XML exception file due to Member Node issues.');
+      }
+
+      // Allow extending classes an easier way to handle the exception.
+      $this->handleSyncFailed($exc);
+    }
+    catch (Exception $e) {
+      DataOneApiVersionOne::throwServiceFailure(2161, 'An unknown error occurred.', array('message' => $e->getMessage()));
+    }
+  }
+
 
   /**
    * Get the DataOne Boolean values as strings.

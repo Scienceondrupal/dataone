@@ -26,6 +26,7 @@ define('DATAONE_VARIABLE_API_SYNC_YEAR', 'dataone_mn_api_sync_year_');
 define('DATAONE_VARIABLE_API_MAX_LOG_COUNT', 'dataone_mn_api_log_count_');
 define('DATAONE_VARIABLE_API_MAX_OBJECT_COUNT', 'dataone_mn_api_object_count_');
 define('DATAONE_VARIABLE_API_CHECKSUM_ALGORITHM', 'dataone_mn_api_checksum_algorithm_');
+define('DATAONE_VARIABLE_API_SYNC_FAILED_DIR', 'dataone_mn_api_sync_failed_directory_');
 define('DATAONE_DEFAULT_MAX_LOG_RECORDS', '50');
 define('DATAONE_DEFAULT_MAX_OBJECT_RECORDS', '50');
 define('DATAONE_DEFAULT_CHECKSUM_ALGORITHM', 'MD5');

@@ -162,6 +162,33 @@ class DataOneApiVersionOneException extends DataOneApiException {
   }
 
   /**
+   * Read an exception from a file.
+   *
+   * @param string $filename
+   *   The filename to read
+   *
+   * @return DataOneApiVersionOneException
+   *   The exception
+   */
+  static public function readException($filename) {
+    $doc = new DOMDocument();
+    $doc->load($filename);
+
+    $errors = $doc->getElementsByTagName("error");
+    foreach ($errors as $error) {
+      $name = $error->getAttribute("name");
+      $error_code_string = $error->getAttribute("errorCode");
+      $error_code = $error_code_string + 0;
+      $detail_code = $error->getAttribute("detailCode");
+      $descriptions = $error->getElementsByTagName("description");
+      $description = $descriptions->length > 0 ? $descriptions->item(0)->nodeValue : '';
+      $trace_infos = $error->getElementsByTagName("traceInformation");
+      $trace_info = $trace_infos->length > 0 ? $trace_infos->item(0)->nodeValue : array();
+      return new DataOneApiVersionOneException($name, $error_code, $detail_code, $description, $trace_info = array());
+    }
+  }
+
+  /**
    * Get the HTTP response headers for a MNRead.describe() exception.
    *
    * @param string $pid_request_parameter

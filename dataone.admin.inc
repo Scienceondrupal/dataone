@@ -276,6 +276,17 @@ function _dataone_build_api_version_form_fields(&$form_element, $weight = 10){
       '#weight' => 15,
     );
 
+    $sync_failed_dir = _dataone_get_variable_name($version_id, DATAONE_VARIABLE_API_SYNC_FAILED_DIR);
+    $form_element[$version_id][$sync_failed_dir] = array(
+      '#type' => 'textfield',
+      '#title' => t('Directory for storing XML notifications of failed synchronizations.'),
+      '#description' => t('The Coordinating Node will notify Member Nodes when an object failed to synchronize. The CN will call the synchronizedFailed() method which POSTs an XML exception file to the Member Node. This directory informs Drupal where to store these exceptions. NOTE: these files must only persist for as long as the synchronizationFalied() method requires and can be removed at any time afterward.'),
+      '#default_value' => 'private://dataone/' . $version_id . '/exceptions',
+      '#element_validate' => array('system_check_directory'),
+      '#weight'=> 20,
+    );
+
+
     // Increment the weight counter fo rthe next section.
     $weight_counter++;
   }
