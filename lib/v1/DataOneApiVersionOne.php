@@ -19,6 +19,7 @@
  *   -> MNRead.get()
  *
  *   related functions to implement:
+ *    - streamResponse()
  *    - getContenTypeForPid()
  *
  * alterSystemMetadata($pid, $elements)
@@ -61,7 +62,12 @@
  * handleSyncFailed()
  *   -> synchronizationFailed()
  *
- * getReplica()
+ * getObjectForStreaming()
+ *   -> getReplica()
+ *
+ *   related functions to implement:
+ *    - streamResponse()
+ *    - getContenTypeForPid()
  *
  * === NOTES ===
  *
@@ -99,41 +105,24 @@
 class DataOneApiVersionOne extends DataOneApi {
 
   /**
-   * Get a representation for a given PID.
+   * Make sure a session is authorized for a certain request.
    *
-   * This function should be public so that it can be called by the menu loader.
-   * This function is static so that it can be called by
-   * dataone_api_v1_pid_load().
-   * @see dataone_api_v1_pid_load
+   * This function is protected and not static so that it can be overridden by
+   * an extending class.
    *
-   * @param string $pid
-   *   The PID from the request.
+   * @param integer $invalid_token_code
+   *   The detail code for throwing InvalidToken Exception
    *
-   * @param mixed
-   *   Either FALSE or a structure like a node or entity or array.
+   * @param integer $not_authorized_code
+   *   The detail code for throwing NotAuthorized Exception
    */
-  static public function loadPid($pid) {
-    watchdog('dataone', 'call to loadPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
-    return $pid;
-  }
-
-  /**
-  * Make sure a session is authorized for a certain request.
-  *
-  * This function is protected and not static so that it can be overridden by
-  * an extending class.
-  *
-  * @param integer $invalid_token_code
-  *   The detail code for throwing InvalidToken Exception
-  *
-  * @param integer $not_authorized_code
-  *   The detail code for throwing NotAuthorized Exception
-  */
   protected function checkSession($invalid_token_code, $not_authorized_code) {
+
     // Check authentication.
     $session = $this->getSession();
     // If no session information, then throw Invalid Token.
 
+    $path_config = $this->getPathConfig();
     // Check the session against the API request.
     if  (empty($path_config['function'])) {
       DataOneApiVersionOne::throwNotAuthorized($not_authorized_code, 'Not authorized to access the resource');
@@ -142,7 +131,6 @@ class DataOneApiVersionOne extends DataOneApi {
     // An implementing class should decide if the session is not authorized.
     // If not authorized for any cases below,
     // call DataOneApiVersionOne::throwNotAuthorized($not_authorized_code, 'Some message');
-    $path_config = $this->getPathConfig();
     switch($path_config['function']) {
       case 'ping':
         break;
@@ -176,8 +164,27 @@ class DataOneApiVersionOne extends DataOneApi {
     }
 
     if (empty($session)) {
-      DataOneApiVersionOne::throwInvalidToken($invalid_token_code, 'No authentication information provided');
+      DataOneApiVersionOne::throwInvalidToken($invalid_token_code, 'No authentication information provided to this impl');
     }
+  }
+
+  /**
+   * Get a representation for a given PID.
+   *
+   * This function should be public so that it can be called by the menu loader.
+   * This function is static so that it can be called by
+   * dataone_api_v1_pid_load().
+   * @see dataone_api_v1_pid_load
+   *
+   * @param string $pid
+   *   The PID from the request.
+   *
+   * @param mixed
+   *   Either FALSE or a structure like a node or entity or array.
+   */
+  static public function loadPid($pid) {
+    watchdog('dataone', 'call to loadPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
+    return $pid;
   }
 
   /**
@@ -193,23 +200,28 @@ class DataOneApiVersionOne extends DataOneApi {
    * @param integer $max_count
    *   The maximum number of records to return
    *
-   * @param integer $from_date
-   *   The date from which results start formatted as the result of strtotime()
+   * @param mixed $from_date
+   *   Either a timestamp like time() or FALSE
    *
-   * @param integer $to_date
-   *   The date to which results end formatted as the result of strtotime()
+   * @param mixed $to_date
+   *   Either a timestamp like time() or FALSE
    *
-   * @param string $event
-   *   One of the values from DataOneApiVersionApi::getDataOneEventTypes()
+   * @param mixed $event
+   *   Either an event type from DataOneApiVersionApi::getDataOneEventTypes() or
+   *   FALSE
    *   Values here are validated when calling _buildLogEntry()
    *
-   * @param string $pid_filter
-   *   Return only log records for identifiers that start with this string
-   *   Support for this parameter is optional and MAY be ignored with no warning.
+   * @param mixed $pid_filter
+   *   Either a whole or partial PID from which results will start with this s
+   *   tring or FALSE. Support for this parameter is optional and MAY be ignored
+   *   with no warning.
    *
    * @return array
+   *   Formatted with keys
+   *    - 'entries' => array(), // the entries satisfying the parameters
+   *    - 'total' => integer, // the total # of entries that satisfy the params
    */
-  protected function getLogRecordDataForParameters($start, $max_count, $from_date, $to_date, $event, $pid_filter) {
+  protected function getLogRecordDataForParameters($start, $max_count, $from_date = FALSE, $to_date = FALSE, $event = FALSE, $pid_filter = FALSE) {
     watchdog('dataone', 'call to getLogRecordDataForParameters() should be made by an implementing class', array(), WATCHDOG_ERROR);
 
     // Figure out given the parameters what records to report.
@@ -239,8 +251,6 @@ class DataOneApiVersionOne extends DataOneApi {
 
   /**
    * Get the list of object PIDs given some optinal parameters.
-   *
-   * Get the log entries.
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/MN_APIs.html#MNRead.listObjects
    * @see _buildObjectInfo()
    *
@@ -257,16 +267,21 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The date to which results end formatted as the result of strtotime()
    *
    * @param string $format_id
-   *   One of the values from DataOneApiVersionApi::getDataOneEventTypes()
-   *   Values here are validated when calling _buildObjectInfo()
+   *   Restrict results to the specified object format identifier.
+   *   @see https://cn.dataone.org/cn/v1/formats
    *
    * @param string $replica_status
-   *   Return only log records for identifiers that start with this string
-   *   Support for this parameter is optional and MAY be ignored with no warning.
+   *    Indicates if replicated objects should be returned in the list (i.e. any
+   *    entries present in the SystemMetadata.replica, objects that have been
+   *    replicated to this member node). If false, then no objects that have
+   *    been replicated should be returned. If true, then any objects can be
+   *    returned, regardless of replication status. If not present, then the
+   *    replicaStatus filter should be ignored.
+   *    For Tier 1 API implmentations, this can be ignored.
    *
    * @return array
    */
-  protected function getListOfObjectsForParameters($start, $max_count, $from_date, $to_date, $format_id, $replica_status) {
+  protected function getListOfObjectsForParameters($start, $max_count, $from_date = FALSE, $to_date = FALSE, $format_id = FALSE, $replica_status = FALSE) {
 
     // Figure out given the parameters what records to report.
     // May use _buildObjectInfo() to format the entries.
@@ -381,7 +396,7 @@ class DataOneApiVersionOne extends DataOneApi {
    */
   public function getObjectForStreaming($pid) {
     global $base_url;
-    watchdog('dataone', 'call to getObjectForStreaming(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    watchdog('dataone', 'call to getObjectForStreaming() should be made by an implementing class', array(), WATCHDOG_ERROR);
     return $base_url;
   }
 
@@ -431,7 +446,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The timestamp to be passed to format_date()
    */
   public function getLastModifiedDateForPid($pid) {
-    watchdog('dataone', 'call to getLastModifiedDateForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    watchdog('dataone', 'call to getLastModifiedDateForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
     return time();
   }
 
@@ -445,7 +460,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The size of the object in bytes
    */
   public function getByteSizeForPid($pid) {
-    watchdog('dataone', 'call to getByteSizeForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    watchdog('dataone', 'call to getByteSizeForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
     return -1;
   }
 
@@ -461,9 +476,10 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The format ID for the object
    */
   public function getFormatIdForPid($pid) {
-    watchdog('dataone', 'call to getFormatIdForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    watchdog('dataone', 'call to getFormatIdForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
     return 'application/octet-stream';
   }
+
   /**
    * Get the checksum of the object identified by the given PID.
    *
@@ -480,31 +496,31 @@ class DataOneApiVersionOne extends DataOneApi {
    *   @see http://php.net/manual/en/function.hash-file.php
    */
   public function getChecksumForPid($pid, $algorithm) {
-    watchdog('dataone', 'call to getChecksumForPid(@pid, @algorithm) should be made by an implementing class', array('@pid' => $pid, 'algorithm' => $algorithm), WATCHDOG_ERROR);
-
+    watchdog('dataone', 'call to getChecksumForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
+    $uri = $this->getObjectForStreaming($pid);
     switch($algorithm) {
       case 'Adler-32':
-        //return hash_file('adler32', $pid->getFilePath());
+        //return hash_file('adler32', $uri);
       case 'CRC32':
-        //$hash = hash_file('crc32b', $pid->getFilePath());
+        //$hash = hash_file('crc32b', $uri);
         //$crc32 = unpack('N', pack('H*', $hash));
         //return $crc32[1];
       case 'MD2':
-        //return hash_file('md2', pid->getFilePath());
+        //return hash_file('md2', $uri;
       case 'SHA-1':
-        //return sha1_file($pid->getFilePath());
+        //return sha1_file($uri);
       case 'SHA-256':
-        //return hash_file('sha256', $pid->getFilePath());
+        //return hash_file('sha256', $uri);
       case 'SHA-384':
-        //return hash_file('sha384', $pid->getFilePath());
+        //return hash_file('sha384', $uri);
       case 'SHA-512':
-        //return hash_file('sha512', $pid->getFilePath());
+        //return hash_file('sha512', $uri);
       case 'Whirlpool':
-        //return hash_file('whirlpool', $pid->getFilePath();
+        //return hash_file('whirlpool', $uri);
 
       case 'MD5':
       default:
-        //return md5_file($pid->getFilePath());
+        //return md5_file($uri);
     }
 
     return 'unknown';
@@ -521,7 +537,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The unsigned long value representing the serial version
    */
   public function getSerialVersionForPid($pid) {
-    watchdog('dataone', 'call to getSerialVersionForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    watchdog('dataone', 'call to getSerialVersionForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
     return 0;
   }
 
@@ -535,7 +551,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The Content-Type header value
    */
   public function getContenTypeForPid($pid) {
-    watchdog('dataone', 'call to getContenTypeForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    watchdog('dataone', 'call to getContenTypeForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
     return 'application/octet-stream';
   }
 
@@ -551,7 +567,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.Identifier
    */
   public function getIdentifierForPid($pid) {
-    watchdog('dataone', 'call to getIdentifierForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    watchdog('dataone', 'call to getIdentifierForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
     return strval($pid);
   }
 
@@ -572,7 +588,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The submitter
    */
   public function getSubmitterForPid($pid) {
-    watchdog('dataone', 'call to getSubmitterForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_NOTICE);
+    watchdog('dataone', 'call to getSubmitterForPid() should be made by an implementing class', array(), WATCHDOG_NOTICE);
     $subjects = _dataone_get_member_node_subjects(TRUE);
     return $subjects[0];
   }
@@ -589,7 +605,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The submitter
    */
   public function getRightsHolderForPid($pid) {
-    watchdog('dataone', 'call to getRightsHolderForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_NOTICE);
+    watchdog('dataone', 'call to getRightsHolderForPid() should be made by an implementing class', array(), WATCHDOG_NOTICE);
     $subjects = _dataone_get_member_node_subjects(TRUE);
     return $subjects[0];
   }
@@ -609,7 +625,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   @see getDataOnePermissions()
    */
   public function getAccessPoliciesForPid($pid) {
-    watchdog('dataone', 'call to getAccessPoliciesForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_NOTICE);
+    watchdog('dataone', 'call to getAccessPoliciesForPid() should be made by an implementing class', array(), WATCHDOG_NOTICE);
     return array(
       'public' => array('read'),
     );
@@ -626,7 +642,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   @see DataOneApiVersionOne::getDataOneBooleans()
    */
   public function getReplicationAllowedForPid($pid) {
-    watchdog('dataone', 'call to getReplicationAllowedForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    watchdog('dataone', 'call to getReplicationAllowedForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
     return FALSE;
   }
 
@@ -641,7 +657,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.Identifier
    */
   public function getObsoletedIdentifierForPid($pid) {
-    watchdog('dataone', 'call to getObsoletedIdentifierForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    watchdog('dataone', 'call to getObsoletedIdentifierForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
     return '';
   }
 
@@ -656,7 +672,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.Identifier
    */
   public function getObsoletedByIdentifierForPid($pid) {
-    watchdog('dataone', 'call to getObsoletedByIdentifierForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    watchdog('dataone', 'call to getObsoletedByIdentifierForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
     return '';
   }
 
@@ -677,7 +693,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   @see DataOneApiVersionOne::getDataOneBooleans()
    */
   public function getArchiveStatusForPid($pid) {
-    watchdog('dataone', 'call to getArchiveStatusForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_NOTICE);
+    watchdog('dataone', 'call to getArchiveStatusForPid() should be made by an implementing class', array(), WATCHDOG_NOTICE);
     return FALSE;
   }
 
@@ -692,7 +708,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   Either the timestamp to be passed to format_date() or FALSE
    */
   public function getDateUploadedForPid($pid) {
-    watchdog('dataone', 'call to getDateUploadedForPid(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    watchdog('dataone', 'call to getDateUploadedForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
     return FALSE;
   }
 
@@ -707,7 +723,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   Either the reference identifier or FALSE
    */
   public function getOriginMemberNode($pid) {
-    watchdog('dataone', 'call to getOriginMemberNode(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    watchdog('dataone', 'call to getOriginMemberNode() should be made by an implementing class', array(), WATCHDOG_ERROR);
     return FALSE;
   }
 
@@ -722,7 +738,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   Either the reference identifier or FALSE
    */
   public function getAuthoritativeMemberNode($pid) {
-    watchdog('dataone', 'call to getAuthoritativeMemberNode(@pid) should be made by an implementing class', array('@pid' => $pid), WATCHDOG_ERROR);
+    watchdog('dataone', 'call to getAuthoritativeMemberNode() should be made by an implementing class', array(), WATCHDOG_ERROR);
     return FALSE;
   }
 
@@ -736,7 +752,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   Either TRUE or FALSE
    */
   public function handleSyncFailed($exc) {
-    watchdog('dataone', 'call to handleSyncFailed(@exc) should be made by an implementing class', array('@exc' => $exc), WATCHDOG_NOTICE);
+    watchdog('dataone', 'call to handleSyncFailed(@exc) should be made by an implementing class', array('@exc' => $exc->__toString()), WATCHDOG_NOTICE);
     return FALSE;
   }
 
@@ -837,6 +853,7 @@ class DataOneApiVersionOne extends DataOneApi {
     // The response to send the client.
     $response = FALSE;
     try {
+
       // Check that the API is live and accessible.
       // Passing the NotImplemented and ServiceFailure exception detail codes
       // specific to MNCore.getLogRecords().
@@ -1734,8 +1751,8 @@ class DataOneApiVersionOne extends DataOneApi {
   /**
    * Figure out which API method to run: MNRead.get() or MNRead.describe().
    */
-  protected function getOrDescribe($args) {
-    $pid = $args[0];
+  protected function getOrDescribe($pid) {
+
     // Figure out which HTTP method was used.
     switch($_SERVER['REQUEST_METHOD']) {
       case 'HEAD':
@@ -1781,21 +1798,26 @@ class DataOneApiVersionOne extends DataOneApi {
   }
 
   /**
+   * Get the current path of the request.
+   *
+   * @return string
+   *   the current DataONE path
+   */
+  static public function currentPath() {
+    // Figure out which path was called.
+    $full_path = current_path();
+    $endpoint_path = _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_ENDPOINT);
+    return substr($full_path, strlen($endpoint_path));
+  }
+
+  /**
    * Build a request handler for the current API request.
    *
    * @return object
    *   A DataOneApiVersionOne implementation class
    */
   static public function construct() {
-
-    // Figure out which path was called.
-    $full_path = current_path();
-    $endpoint_path = _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_ENDPOINT);
-    $api_path = substr($full_path, strlen($endpoint_path));
-
-    // Set the path configuration.
-    $instance = new self(DataOneApiVersionOne::getPathInformation($api_path));
-    return $instance;
+    return new self(DataOneApiVersionOne::getPathInformation());
   }
 
   /**
@@ -1938,7 +1960,7 @@ class DataOneApiVersionOne extends DataOneApi {
 
     // Send the response.
     if ($stream_response) {
-      readfile($response_body);
+      $this->streamResponse($response_body);
     }
     else {
       print $response_body;
@@ -1946,6 +1968,16 @@ class DataOneApiVersionOne extends DataOneApi {
 
     // Finish the response.
     drupal_exit();
+  }
+
+  /**
+   * Stream a response.
+   *
+   * @param string $filename
+   *   The filename or URI to stream
+   */
+  protected function streamResponse($filename) {
+    readfile($filename);
   }
 
   /**
@@ -2100,7 +2132,7 @@ class DataOneApiVersionOne extends DataOneApi {
         DataOneApiVersionOne::throwInvalidRequest($invalid_request_code, 'Required parameter "$query_param" is missing.');
       }
       // Set any default values for missing parameters.
-      if (!empty($parameter_info['default_value']) && TRUE == $parameter_info['default_value'] && empty($parameters[$query_param])) {
+      if (isset($parameter_info['default_value']) && empty($parameters[$query_param])) {
         $parameters[$query_param] = $parameter_info['default_value'];
       }
     }
@@ -2419,7 +2451,12 @@ class DataOneApiVersionOne extends DataOneApi {
    * @return array
    *   The menu path information related to the given path
    */
-  static public function getPathInformation($path) {
+  static public function getPathInformation($path = FALSE) {
+
+    if (!$path) {
+      $path = self::currentPath();
+    }
+
     // The correlated Drupal menu item.
     $menu_item = menu_get_item();
     // Setup an array of request metadata to pass along.
@@ -2453,29 +2490,29 @@ class DataOneApiVersionOne extends DataOneApi {
    * @param string $identifier
    *   The identifier of the object related to this log entry.
    *
-   * @param string $ip_address
-   *   The IP Address of the acting client
-   *
-   * @param string $user_agent
-   *   The User Agent as reported in the User-Agent HTTP header of the client.
-   *
-   * @param string $subject
-   *   The X.509 Distinguished Name
-   *   @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.Subject
+   * @param integer $date_logged
+   *   The date timestamp to be used by format_date()
+   *   @see format_date()
    *
    * @param string $event
    *   The operation that occurred reported as a DataONE event
    *   @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.Event
    *   Possible values: create, read, update, delete, replicate, synchronization_failed, replication_failed
    *
-   * @param integer $date_logged
-   *   The date timestamp to be used by format_date()
-   *   @see format_date()
+   * @param string $subject
+   *   The X.509 Distinguished Name
+   *   @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.Subject
+   *
+   * @param string $ip_address
+   *   The IP Address of the acting client
+   *
+   * @param string $user_agent
+   *   The User Agent as reported in the User-Agent HTTP header of the client.
    *
    * @return array
    *   A log entry
    */
-  protected function _buildLogEntry($entry_id, $identifier, $ip_address, $user_agent, $subject, $event, $date_logged) {
+  protected function _buildLogEntry($entry_id, $identifier, $date_logged, $event, $subject, $ip_address = '', $user_agent = '') {
     $data = &drupal_static(__FUNCTION__, array());
     if (!isset($data['event_types'])) {
       $data['event_types'] = $this::getDataOneEventTypes();
@@ -2570,8 +2607,11 @@ class DataOneApiVersionOne extends DataOneApi {
         DataOneApiVersionOne::throwServiceFailure(2161, 'Could not read the XML exception file due to Member Node issues.');
       }
 
+      // Figure out how to find the PID from the exception.
+      $pid = '';
+
       // Announce the replication event.
-      module_invoke_all('dataone_event', 'synchronization_failed');
+      module_invoke_all('dataone_event', 'synchronization_failed', $pid);
 
       // Allow extending classes an easier way to handle the exception.
       $this->handleSyncFailed($exc);
