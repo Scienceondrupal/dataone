@@ -179,15 +179,9 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
       // Tier 1 implementations don't replicate nodes, it is safe to ignore.
     }
 
-    // Set the OFFSET & LIMIT.
-    $query .= ' OFFSET :start';
-    $query .= ' LIMIT :max';
-    $args[':start'] = $start;
-    $args[':max'] = $max_count;
-
     // Run the queries.
     $total = db_query($count_start . $query, $args)->fetchField();
-    $records = db_query($query_start . $query, $args)->fetchAllAssoc('nid');
+    $records = db_query_range($query_start . $query, $start, $max_count, $args)->fetchAllAssoc('nid');
 
     // Initialize the array to return.
     $objects = array(
