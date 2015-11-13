@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<error name="NotImplemented" errorCode="501" detailCode="9999">
+    <description>params</description>
+    <pid>9999999</pid>
+    <traceInformation>params:
+</traceInformation>
+</error>
