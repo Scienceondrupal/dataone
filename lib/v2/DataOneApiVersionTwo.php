@@ -14,7 +14,7 @@ class DataOneApiVersionTwo extends DataOneApi {
    *   Associative array keyed by API method relative to the version endpoint
    */
   static public function getApiMenuPaths(){
-    return $parent::getApiMenuPaths();
+    return parent::getApiMenuPaths();
   }
 
   /**

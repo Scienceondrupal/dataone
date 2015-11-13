@@ -153,7 +153,7 @@ function _dataone_build_api_version_form_fields(&$form_element, $weight = 10){
     $replicated = _dataone_get_variable_name($version_id, DATAONE_VARIABLE_API_REPLICATE);
     $form_element[$version_id][$replicated] = array(
       '#type' => 'radios',
-      '#title' => t('Should the node be replicated?'),
+      '#title' => t('Does this node replicate other Member Node objects?'),
       '#description' => t('This toggle provides a way to turn off whether the Member Node objects are replicated or not.'),
       '#options' => _dataone_admin_replicate_options(),
       '#default_value' => _dataone_get_variable($version_id, DATAONE_VARIABLE_API_REPLICATE, DATAONE_API_FALSE_STRING),
@@ -321,8 +321,10 @@ function _dataone_admin_replicate_options() {
   $options = &drupal_static(__FUNCTION__);
   if (empty($options)) {
     $options = array(
-      DATAONE_API_TRUE_STRING => t('This node should be replicated.'),
-      DATAONE_API_FALSE_STRING => t('This node should NOT be replicated.'),
+      // Disallow 'true' becuase we are only implementing Tier 1.
+      // Tier 1 does not replicate.
+      // DATAONE_API_TRUE_STRING => t('This node can replicate objects for other Member Nodes.'),
+      DATAONE_API_FALSE_STRING => t('This node should NOT replicate objects for other Member Nodes.'),
     );
   }
 

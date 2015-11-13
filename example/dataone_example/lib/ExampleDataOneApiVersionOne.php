@@ -6,6 +6,11 @@
  *
  * This implementation works over Drupal nodes.
  *
+ * To implement your own version, you must override:
+ *  static public function construct()
+ * for your class to be called correctly.
+ *
+ *
  * Checksum algorithm(s) supported: MD5
  * The object = the HTML contents of node/{nid} page
  */
@@ -24,16 +29,36 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
   }
 
   /**
-   * Return the node for the given PID.
+   * Get a representation for a given PID.
+   *
+   * @see DataOneApiVersionOne::validPid()
+   * @see dataone_load()
    *
    * @param string $pid
-   *   The node ID
+   *   The PID from the request.
    *
    * @param mixed
-   *   Either FALSE or a Drupal node
+   *   Either DATAONE_API_LOADER_FAILED or a Drupal node.
    */
   static public function loadPid($pid) {
-    return node_load($pid);
+    $node = node_load($pid);
+    return $node ? $node : FALSE;
+  }
+
+  /**
+   * Get a PID from a given representation.
+   *
+   * @see dataone_load()
+   * @see DataOneApiVersionOne::loadPid()
+   *
+   * @param mixed $object
+   *   The object for which to return a PID for
+   *
+   * @param mixed
+   *   Either the string PID or FALSE
+   */
+  static public function getPidForObject($object) {
+    return dataone_example_get_pid($object);
   }
 
   /**
@@ -70,12 +95,13 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
 
     // Keep track of two queries, one for calculating the total number of
     // records and another for the actual records matching the given criteria.
-    $query_start = "SELECT *";
-    $count_start = "SELECT COUNT(*)";
+
+    // Query body for both count and select queries.
+    // Add a WHERE clause to make optional parameters easier to append.
+    $query = ' FROM {' . DATAONE_EXAMPLE_TABLE_LOG . '} WHERE pid IS NOT NULL';
     // Keep track of query arguments.
     $args = array();
 
-    $query = ' FROM {' . DATAONE_EXAMPLE_TABLE_LOG . '} WHERE pid IS NOT NULL';
     // From date.
     if ($from_date) {
       $query .= ' AND timestamp >= :from';
@@ -98,8 +124,10 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
     }
 
     // Run the queries.
-    $total = db_query($count_start . $query, $args)->fetchField();
-    $records = db_query_range($query_start . $query, $start, $max_count, $args)->fetchAll();
+    $count_query = 'SELECT COUNT(*)' . $query;
+    $total = db_query($count_query, $args)->fetchField();
+    $select_query = 'SELECT *' . $query . ' ORDER BY timestamp';
+    $records = db_query_range($select_query, $start, $max_count, $args)->fetchAll();
 
     // Initialize the array to return.
     $entries = array(
@@ -128,10 +156,10 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
    * @param integer $max_count
    *   The maximum number of records to return
    *
-   * @param integer $from_date
+   * @param integer $modified_from_date
    *   The date from which results start formatted as the result of strtotime()
    *
-   * @param integer $to_date
+   * @param integer $modified_to_date
    *   The date to which results end formatted as the result of strtotime()
    *
    * @param string $format_id
@@ -149,7 +177,7 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
    *
    * @return array
    */
-  protected function getListOfObjectsForParameters($start, $max_count, $from_date = FALSE, $to_date = FALSE, $format_id = FALSE, $replica_status = FALSE) {
+  protected function getListOfObjectsForParameters($start, $max_count, $modified_from_date = FALSE, $modified_to_date = FALSE, $format_id = FALSE, $replica_status = FALSE) {
 
 
     // Keep track of two queries, one for calculating the total number of
@@ -161,14 +189,14 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
 
     $query = ' FROM {node} WHERE nid IS NOT NULL';
     // From date.
-    if ($from_date) {
-      $query .= ' AND created >= :from';
-      $args[':from'] = $from_date;
+    if ($modified_from_date) {
+      $query .= ' AND changed >= :from';
+      $args[':from'] = $modified_from_date;
     }
     // To date.
-    if ($to_date) {
-      $query .= ' AND created <= :to';
-      $args[':to'] = $to_date;
+    if ($modified_to_date) {
+      $query .= ' AND changed <= :to';
+      $args[':to'] = $modified_to_date;
     }
     // Format ID.
     if ($format_id) {
@@ -178,6 +206,8 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
     if ($replica_status) {
       // Tier 1 implementations don't replicate nodes, it is safe to ignore.
     }
+
+    $query .= ' ORDER BY nid';
 
     // Run the queries.
     $total = db_query($count_start . $query, $args)->fetchField();
@@ -194,7 +224,7 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
       $nodes = node_load_multiple($nids);
       // Loop through all log records.
       foreach ($nodes as $node) {
-        $pid = dataone_example_get_pid($node);
+        $pid = $this->getIdentifierForPid($node);
         $format_id = $this->getFormatIdForPid($node);
         $algorithm = _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_CHECKSUM_ALGORITHM);
         $checksum = $this->getChecksumForPid($node, $algorithm);
@@ -217,13 +247,15 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
    *   Either TRUE or FALSE
    */
   public function handleSyncFailed($exc) {
-    // This would probably happen if a node was deleted.
+
+    // Do something??
+    // Remember that dataone_example_dataone_event() will log the sync failed.
     return TRUE;
   }
 
   /**
    * Get the file path or uri for MNRead.get() & MNRead.getReplica().
-   * @see readfile()
+   * @see DataOneApiVersionOne::streamResponse()
    *
    * This function should be public so that it can be called by the menu loader.
    * This function is static so that it can be called by
@@ -239,22 +271,6 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
   public function getObjectForStreaming($pid) {
     $uri_array = node_uri($pid);
     return url($uri_array['path'], array('absolute' => TRUE));
-  }
-
-  /**
-   * Stream a response.
-   *
-   * @param string $filename
-   *   The filename or URI to stream
-   */
-  protected function streamResponse($filename) {
-    // Since this implementation is sending URLs, stream them to the client.
-    if ($fd = fopen($filename, 'rb')) {
-      while (!feof($fd)) {
-          print fread($fd, 1024);
-        }
-        fclose($fd);
-    }
   }
 
   /**
@@ -312,7 +328,7 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
    */
   public function getByteSizeForPid($pid) {
     $uri = $this->getObjectForStreaming($pid);
-    return filesize($uri);
+    return $this->streamResponse($uri, FALSE);
   }
 
 /**
@@ -332,6 +348,8 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
    */
   public function getChecksumForPid($pid, $algorithm) {
     $uri = $this->getObjectForStreaming($pid);
+    // NOTE: depending on your Drupal site's cache configuration, the MD5 hash
+    // of the URL contents may be different for each request.
     return md5_file($uri);
   }
 
@@ -478,16 +496,32 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
 
   /**
    * This implementation supports replication.
+   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.ReplicationPolicy
    *
    * @param mixed $pid
    *   The result of loadPid()
    *
    * @return mixed
-   *   Either the DataONE boolean string or FALSE
-   *   @see DataOneApiVersionOne::getDataOneBooleans()
+   *   Either an array of elements or FALSE
+   *   - allowed : either DATAONE_API_TRUE_STRING or DATAONE_API_FALSE_STRING
+   *   - number_of_replicas : positive integer; defaults to 3
+   *   - preferred_member_node : an array of Member Node DN subjects
+   *   - blocked_member_node : an array of Member Node DN subjects
    */
-  public function getReplicationAllowedForPid($pid) {
-    return TRUE;
+  public function getReplicationPolicyForPid($pid) {
+    $preferred = array(
+      'MN=urn:node:TheBestSecureDataStore, DC=dataone, DC=org',
+      'MN=urn:node:MIT, DC=dataone, DC=org',
+    );
+    $blocked = array(
+      'MN=urn:node:TheWorstUnstableDataStore, DC=dataone, DC=org',
+    );
+    return array(
+      'allowed' => DATAONE_API_TRUE_STRING,
+      'number_of_replicas' => 2,
+      'preferred_member_node' => $preferred,
+      'blocked_member_node' => $blocked,
+    );
   }
 
   /**
@@ -550,7 +584,7 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
     }
 
     if (empty($session)) {
-      //DataOneApiVersionOne::throwInvalidToken($invalid_token_code, 'No authentication information provided');
+      DataOneApiVersionOne::throwInvalidToken($invalid_token_code, 'No authentication information provided');
     }
   }
 

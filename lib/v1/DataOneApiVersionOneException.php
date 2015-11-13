@@ -18,6 +18,14 @@ class DataOneApiVersionOneException extends DataOneApiException {
   // A key-value pair dictionary of helpful debudding information.
   protected $trace_info;
 
+  // The object identifier. Required for exceptions that include an identifier
+  // in the constructor signature
+  // (e.g. NotFound, IdentifierNotUnique, SynchronizationFailed).
+  protected $pid;
+
+  // The node identifier of the machine that raised the exception
+  protected $node_id;
+
   // A Drupal watchdog() code.
   protected $watchdog_code;
 
@@ -27,11 +35,13 @@ class DataOneApiVersionOneException extends DataOneApiException {
    * $error_code maps to $parent->code
    * $message maps to $parent->messages
    */
-  public function __construct($error_name, $error_code, $detail_code, $description, $trace_info = array(), $watchdog_code = WATCHDOG_ERROR) {
+  public function __construct($error_name, $error_code, $detail_code, $description, $trace_info = array(), $pid = FALSE, $node_id = FALSE, $watchdog_code = WATCHDOG_ERROR) {
 
     $this->error_name = $error_name;
     $this->detail_code = $detail_code;
     $this->trace_info = $trace_info;
+    $this->node_id = $node_id;
+    $this->pid = $pid;
     $this->watchdog_code = $watchdog_code;
 
     parent::__construct($description, $error_code);
@@ -74,6 +84,40 @@ class DataOneApiVersionOneException extends DataOneApiException {
   }
 
   /**
+   * Get the PID.
+   */
+  public function getPid() {
+    return $this->pid;
+  }
+
+  /**
+   * Set the PID.
+   *
+   * @param string $pid
+   *   The PID.
+   */
+  public function setPid($pid) {
+    $this->pid = $pid;
+  }
+
+  /**
+   * Get the Node ID.
+   */
+  public function getNodeId() {
+    return $this->node_id;
+  }
+
+  /**
+   * Set the Node ID.
+   *
+   * @param string $node_id
+   *   The Node ID.
+   */
+  public function setNodeId($node_id) {
+    $this->node_id = $node_id;
+  }
+
+  /**
    * Get the watchdog code.
    */
   public function getWatchdogCode() {
@@ -113,16 +157,21 @@ class DataOneApiVersionOneException extends DataOneApiException {
    *   The returned value if there is no trace information
    */
   public function generateTraceInformation($element_delimeter = ": ", $delimeter = "\n", $element_prefix = "", $element_suffix = "", $prefix = "", $suffix = "", $no_results = FALSE) {
+    // No results?
     if (!$this->hasTraceInformation()) {
       return $no_results;
     }
-    $trace_info = $this->getTraceInformation();
+    // Print the prefix.
     $trace = $prefix;
+    $trace_info = $this->getTraceInformation();
+    // Find the last key.
     $trace_keys = array_keys($trace_info);
     $last_key = end($trace_keys);
+    // Iterate through the trace information.
     foreach ($trace_info as $key => $value) {
       $trace .= $element_prefix . $key . $element_delimeter . $value . $element_suffix;
-      if ($last_key == $key) {
+      // Print the delimiter after each record except the last.
+      if ($last_key != $key) {
         $trace .= $delimeter;
       }
     }
@@ -152,6 +201,14 @@ class DataOneApiVersionOneException extends DataOneApiException {
         'description' => $this->getDescription(),
       ),
     );
+    $pid = $this->getPid();
+    if ($pid) {
+      $elements['error']['pid'] = $pid;
+    }
+    $node_id = $this->getNodeId();
+    if ($node_id) {
+      $elements['error']['nodeId'] = $node_id;
+    }
     $trace_info_value = $this->generateTraceInformation();
     if ($trace_info_value) {
       $elements['error']['traceInformation'] = $trace_info_value;
@@ -184,7 +241,11 @@ class DataOneApiVersionOneException extends DataOneApiException {
       $description = $descriptions->length > 0 ? $descriptions->item(0)->nodeValue : '';
       $trace_infos = $error->getElementsByTagName("traceInformation");
       $trace_info = $trace_infos->length > 0 ? $trace_infos->item(0)->nodeValue : array();
-      return new DataOneApiVersionOneException($name, $error_code, $detail_code, $description, $trace_info = array());
+      $pids = $error->getElementsByTagName("pid");
+      $pid = $pids->length > 0 ? $pids->item(0)->nodeValue : '';
+      $node_ids = $error->getElementsByTagName("nodeId");
+      $node_id = $node_ids->length > 0 ? $node_ids->item(0)->nodeValue : '';
+      return new DataOneApiVersionOneException($name, $error_code, $detail_code, $description, $trace_info = array(), $pid, $node_id);
     }
   }
 
@@ -197,20 +258,30 @@ class DataOneApiVersionOneException extends DataOneApiException {
    * @return array
    *   The array of HTTP response headers
    */
-  public function getDescribeHeaders($pid_request_parameter) {
+  public function getDescribeHeaders() {
     return array(
       'Content-Type' => 'text/xml',
       'Status' => $this->getErrorCode(),
       'DataONE-Exception-Name' => $this->getErrorName(),
       'DataONE-Exception-DetailCode' => $this->getDetailCode(),
       'DataONE-Exception-Description' => $this->getDescription(),
-      'DataONE-Exception-PID' => $pid_request_parameter,
+      'DataONE-Exception-PID' => $this->getPid(),
     );
   }
 
   // Custom string representation of object.
   public function __toString() {
-    $str =  __CLASS__ . ": {$this->error_name}[errorCode={$this->code} detailCode={$this->detail_code}]: {$this->message}";
+    $str =  __CLASS__ . ": {$this->error_name}[errorCode={$this->code} detailCode={$this->detail_code}";
+    $pid = $this->getPid();
+    if ($pid) {
+      $str .= " pid={$pid}";
+    }
+    $node_id = $this->getNodeId();
+    if ($node_id) {
+      $str .= " nodeId={$node_id}";
+    }
+    $str .="]: {$this->message}";
+
     $trace = $this->generateTraceInformation('=', '', "\t", "\n", "\nTRACE={\n", "}");
     if ($trace) {
       $str .= $trace;

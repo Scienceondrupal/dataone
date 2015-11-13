@@ -34,7 +34,7 @@ function hook_dataone_api_versions_alter(&$versions) {
  *   The event that just occurred.
  *
  * @param mixed $pid
- *   The identifier passed to the API function
+ *   Either the string identifier or FALSE
  */
 function hook_dataone_event($event_type, $pid = FALSE) {
   $vars = array('@event' => $event_type, '@pid' => $pid);

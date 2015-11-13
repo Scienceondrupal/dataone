@@ -42,6 +42,7 @@ define('DATAONE_API_STATUS_PRODUCTION', 'production');
 define('DATAONE_API_STATUS_DEVELOPMENT', 'development');
 define('DATAONE_API_STATUS_OFF', 'off');
 define('DATAONE_API_DATE_FORMAT', 'D, d M Y H:i:s T');
+define('DATAONE_API_LOADER_FAILED', 'dataone_PID_load_fail');
 
 /**
  * Generic path loader.
@@ -61,7 +62,11 @@ define('DATAONE_API_DATE_FORMAT', 'D, d M Y H:i:s T');
 function dataone_load($path_argument, $version_id, $loader_function) {
   // Figure out which class to call.
   $class = _dataone_api_version_class_name($version_id);
-  return $class::$loader_function($path_argument);
+  $payload = $class::$loader_function($path_argument);
+  // If a wildcard loader function returns FALSE, it would be the equivalent of
+  // page not found. To handle this, we must pass something else so that the API
+  // can process the appropriate exception.
+  return $payload ? $payload : DATAONE_API_LOADER_FAILED;
 }
 
 /**
@@ -127,22 +132,20 @@ function dataone_menu() {
           // Setting 'title' => $title is important.
           // It provides a key from menu_get_item() into getApiMenuPaths().
           'title' => $title,
-          'file' => 'includes/' . $version_id . '.inc',
-          'page callback' => '_dataone_api_v1_request',
+          'page callback' => '_dataone_api_request',
         );
 
         // Page arguments.
         // Arguments in the menu path.
+        $arguments = array($version_id);
         if (!empty($path_info['arguments'])) {
-          $arguments = array();
           foreach ($path_info['arguments'] as $relative_menu_path_index => $arg_info) {
             // Add the count of endpoint path parts to the defined index.
             $arguments[] = $endpoint_parts + $relative_menu_path_index;
           }
-          if (!empty($arguments)) {
-            $items[$api_path]['page arguments'] = $arguments;
-          }
         }
+        $items[$api_path]['page arguments'] = $arguments;
+
         if (!empty($path_info['load arguments'])) {
           $items[$api_path]['load arguments'] = $path_info['load arguments'];
         }
@@ -210,22 +213,41 @@ function _dataone_api_versions() {
 /**
  * Check access control.
  *
- * @param string $version
+ * @param string $api_version
  *   The version of the DataONE API
  *
  * @return BOOL
  *   Either TRUE or FALSE
  */
-function dataone_api_access($version) {
+function dataone_api_access($api_version) {
   // Get the requested arguments.
   $args = func_get_args();
   // Remove the version.
   $args = array_shift($args);
-
   // Figure out which class to call.
-  $class = _dataone_api_version_class_name($version);
+  $class = _dataone_api_version_class_name($api_version);
 
   return $class::accessControl($args);
+}
+
+/**
+ * Handle a DataONE API request.
+ */
+function _dataone_api_request($api_version) {
+
+  // Figure out which class handles the request.
+  $class = _dataone_api_version_class_name($api_version);
+
+  // Instantiate the class.
+  $request = $class::construct();
+
+  // Get the requested arguments.
+  $api_arguments = func_get_args();
+  // Remove the version ID from array of arguments.
+  array_shift($api_arguments);
+
+  // Handle the request.
+  return $request->requestHandler($api_arguments);
 }
 
 /**
