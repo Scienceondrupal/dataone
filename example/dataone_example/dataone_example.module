@@ -42,7 +42,7 @@ function dataone_example_get_pid($node) {
 /**
  * Implements hook_dataone_event().
  */
-function dataone_example_dataone_event($event_type, $pid = FALSE) {
+function dataone_example_dataone_event($event_type, $pid) {
   $ip_address = ip_address();
   $user_agent = _dataone_get_user_agent();
   _dataone_example_log_record($pid, $event_type, time(), $ip_address, $user_agent);

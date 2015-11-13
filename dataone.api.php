@@ -33,10 +33,10 @@ function hook_dataone_api_versions_alter(&$versions) {
  * @param string $event_type
  *   The event that just occurred.
  *
- * @param mixed $pid
- *   Either the string identifier or FALSE
+ * @param string $pid
+ *   A DataONE PID
  */
-function hook_dataone_event($event_type, $pid = FALSE) {
+function hook_dataone_event($event_type, $pid) {
   $vars = array('@event' => $event_type, '@pid' => $pid);
   watchdog('dataone', '@event occurred on object @pid', $vars, WATCHDOG_INFO);
 }
