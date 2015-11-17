@@ -144,12 +144,17 @@ class DataOneApiXml {
    * @return string
    *   The XML as a string
    */
-  static public function printXmlWriter($xml, $end_root_element = TRUE) {
+  static public function printXmlWriter($xml, $end_root_element = TRUE, $end_document = TRUE) {
     if ($end_root_element) {
       $xml->endElement(); //End the element
     }
-
     // Output the xml (obviosly this output could be written to a file)
-    return $xml->outputMemory();
+    $output = $xml->outputMemory();
+
+    if ($end_document) {
+      $xml->endDocument();
+    }
+
+    return $output;
   }
 }
