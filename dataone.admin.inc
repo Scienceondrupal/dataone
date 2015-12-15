@@ -245,15 +245,6 @@ function _dataone_build_api_version_form_fields(&$form_element, $weight = 10){
       '#weight' => 7,
     );
 
-    $checkums_algorithm = _dataone_get_variable_name($version_id, DATAONE_VARIABLE_API_CHECKSUM_ALGORITHM);
-    $form_element[$version_id][$checkums_algorithm]  = array(
-      '#type' => 'select',
-      '#title' => t('Which checksum algorithm should be the default.'),
-      '#options' => _dataone_admin_checksum_algorithm_options(),
-      '#default_value' => _dataone_get_variable($version_id, DATAONE_VARIABLE_API_CHECKSUM_ALGORITHM, DATAONE_DEFAULT_CHECKSUM_ALGORITHM),
-      '#weight' => 10,
-    );
-
     $max_log_count = _dataone_get_variable_name($version_id, DATAONE_VARIABLE_API_MAX_LOG_COUNT);
     $form_element[$version_id][$max_log_count] = array(
       '#type' => 'textfield',
@@ -347,19 +338,6 @@ function _dataone_admin_synchronize_options() {
   }
 
   return $options;
-}
-
-/**
- * Get the possible Member Node checksum algorithm options.
- * @see http://id.loc.gov/vocabulary/preservation/cryptographicHashFunctions.html
- *
- * @return array
- *   Associative array of accepted values for a Member Node's checksum algorithm
- */
-function _dataone_admin_checksum_algorithm_options() {
-  $options = array('Adler-32', 'CRC32', 'MD5', 'SHA-1', 'SHA-256', 'SHA-384', 'SHA-512', 'Whirlpool');
-  return drupal_map_assoc($options);
-
 }
 
 /**

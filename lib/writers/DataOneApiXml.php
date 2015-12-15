@@ -157,4 +157,17 @@ class DataOneApiXml {
 
     return $output;
   }
+
+  /**
+   * Prepare a string for use in an XML tag.
+   *
+   * @param string $string
+   *   The string to prep
+   *
+   * @return string
+   *   The prepared string
+   */
+  static public function prepareXMLString($string) {
+    return htmlspecialchars($string, ENT_XML1, 'UTF-8');
+  }
 }

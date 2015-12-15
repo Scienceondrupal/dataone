@@ -47,18 +47,18 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
 
   /**
    * Get a PID from a given representation.
-   *
+   * @see @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.Identifier
    * @see dataone_load()
    * @see DataOneApiVersionOne::loadPid()
    *
-   * @param mixed $object
-   *   The object for which to return a PID for
+   * @param mixed $pid_data
+   *   The result of LoadPid()
    *
    * @param mixed
    *   Either the string PID or FALSE
    */
-  static public function getPidForObject($object) {
-    return dataone_example_get_pid($object);
+  static public function getPid($pid_data) {
+    return dataone_example_get_pid($pid_data);
   }
 
   /**
@@ -224,7 +224,7 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
       $nodes = node_load_multiple($nids);
       // Loop through all log records.
       foreach ($nodes as $node) {
-        $pid = $this->getIdentifierForPid($node);
+        $pid = $this->getPidForObject($node);
         $format_id = $this->getFormatIdForPid($node);
         $algorithm = _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_CHECKSUM_ALGORITHM);
         $checksum = $this->getChecksumForPid($node, $algorithm);
@@ -262,14 +262,14 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
    * dataone_api_v1_pid_load().
    * @see dataone_api_v1_pid_load
    *
-   * @param mixed $pid
+   * @param mixed $pid_data
    *   The Drupal node
    *
    * @param mixed
    *   Either FALSE or a structure like a node or entity or array.
    */
-  public function getObjectForStreaming($pid) {
-    $uri_array = node_uri($pid);
+  public function getObjectForStreaming($pid_data) {
+    $uri_array = node_uri($pid_data);
     return url($uri_array['path'], array('absolute' => TRUE));
   }
 
@@ -277,28 +277,14 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
    * Get the serial version of the object identified by the given PID.
    * In this case, the node version ID.
    *
-   * @param mixed $pid
+   * @param mixed $pid_data
    *   The Drupal node
    *
    * @return integer
    *   The node version ID
    */
-  public function getSerialVersionForPid($pid) {
-    return $pid->vid;
-  }
-
-  /**
-   * Get the identifier of the object identified by the given PID.
-   * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.Identifier
-   *
-   * @param mixed $pid
-   *   The Drupal node
-   *
-   * @return string
-   *   The PID for the node
-   */
-  public function getIdentifierForPid($pid) {
-    return dataone_example_get_pid($pid);
+  public function getSerialVersionForPid($pid_data) {
+    return $pid_data->vid;
   }
 
   /**
@@ -306,13 +292,13 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
    * @see https://cn.dataone.org/cn/v1/formats
    * @see getObjectForStreaming()
    *
-   * @param mixed $pid
+   * @param mixed $pid_data
    *   The Drupal node
    *
    * @return string
    *   The format ID for the object
    */
-  public function getFormatIdForPid($pid) {
+  public function getFormatIdForPid($pid_data) {
     // Since getObjectForStreaming() returns HTML...
     return 'text/html';
   }
@@ -320,21 +306,21 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
   /**
    * Get the size in bytes of the object identified by the given PID.
    *
-   * @param mixed $pid
+   * @param mixed $pid_data
    *   The result of loadPid()
    *
    * @return integer
    *   The size of the object in bytes
    */
-  public function getByteSizeForPid($pid) {
-    $uri = $this->getObjectForStreaming($pid);
+  public function getByteSizeForPid($pid_data) {
+    $uri = $this->getObjectForStreaming($pid_data);
     return $this->streamResponse($uri, FALSE);
   }
 
 /**
    * Get the checksum of the object identified by the given PID.
    *
-   * @param mixed $pid
+   * @param mixed $pid_data
    *   The result of loadPid()
    *
    * @param string $algorithm
@@ -346,8 +332,8 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
    *   The checksum of the object
    *   @see http://php.net/manual/en/function.hash-file.php
    */
-  public function getChecksumForPid($pid, $algorithm) {
-    $uri = $this->getObjectForStreaming($pid);
+  public function getChecksumForPid($pid_data, $algorithm) {
+    $uri = $this->getObjectForStreaming($pid_data);
     // NOTE: depending on your Drupal site's cache configuration, the MD5 hash
     // of the URL contents may be different for each request.
     return md5_file($uri);
@@ -361,92 +347,92 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
    *  is to use the subject of your MN certificate for rightsHolder for all of
    *  your MN records"
    *
-   * @param mixed $pid
+   * @param mixed $pid_data
    *   Drupal node
    *
    * @return string
    *   The submitter
    */
-  public function getSubmitterForPid($pid) {
+  public function getSubmitterForPid($pid_data) {
     return $this->getMemberNodeSubject();
   }
 
   /**
    * Get the rightsHolder of the object identified by the given PID.
    *
-   * @param mixed $pid
+   * @param mixed $pid_data
    *   Drupal node
    *
    * @return string
    *   The submitter
    */
-  public function getRightsHolderForPid($pid) {
+  public function getRightsHolderForPid($pid_data) {
     return $this->getMemberNodeSubject();
   }
 
   /**
    * Get the access policies of the object identified by the given PID.
    *
-   * @param mixed $pid
+   * @param mixed $pid_data
    *   Drupal node
    *
    * @return array
    *   The access policies keyed by the Subject to an array of permissions.
    */
-  public function getAccessPoliciesForPid($pid) {
+  public function getAccessPoliciesForPid($pid_data) {
     return array('public' => array('read'));
   }
 
   /**
    * Get the date uploaded of the object identified by the given PID.
    *
-   * @param mixed $pid
+   * @param mixed $pid_data
    *   Drupal node
    *
    * @param mixed
    *   Either the timestamp to be passed to format_date() or FALSE
    */
-  public function getDateUploadedForPid($pid) {
-    return $pid->created;
+  public function getDateUploadedForPid($pid_data) {
+    return $pid_data->created;
   }
 
   /**
    * Get the Node reference identifier for the orignal DataONE Member Node.
    *
-   * @param mixed $pid
+   * @param mixed $pid_data
    *   Drupal node
    *
    * @param mixed
    *   Either the reference identifier or FALSE
    */
-  public function getOriginMemberNode($pid) {
+  public function getOriginMemberNode($pid_data) {
     return FALSE;
   }
 
   /**
    * The Node reference identifier for the authoritative DataONE Member Node.
    *
-   * @param mixed $pid
+   * @param mixed $pid_data
    *   Drupal node
    *
    * @param mixed
    *   Either the reference identifier or FALSE
    */
-  public function getAuthoritativeMemberNode($pid) {
+  public function getAuthoritativeMemberNode($pid_data) {
     return FALSE;
   }
 
   /**
    * Get the last modified date of the object identified by the given PID.
    *
-   * @param mixed $pid
+   * @param mixed $pid_data
    *   Drupal node
    *
    * @param integer
    *   The timestamp to be passed to format_date()
    */
-  public function getLastModifiedDateForPid($pid) {
-    return $pid->changed;
+  public function getLastModifiedDateForPid($pid_data) {
+    return $pid_data->changed;
   }
 
   /**
@@ -457,40 +443,40 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
    * polices allow. The field is optional, and if absent, then objects are
    * implied to not be archived, which is the same as setting archived to false.
    *
-   * @param mixed $pid
+   * @param mixed $pid_data
    *   Drupal node
    *
    * @return mixed
    *   Either the DataONE boolean string or FALSE
    *   @see DataOneApiVersionOne::getDataOneBooleans()
    */
-  public function getArchiveStatusForPid($pid) {
-    return $pid->status ? DATAONE_API_FALSE_STRING : DATAONE_API_TRUE_STRING;
+  public function getArchiveStatusForPid($pid_data) {
+    return $pid_data->status ? DATAONE_API_FALSE_STRING : DATAONE_API_TRUE_STRING;
   }
 
   /**
    * The identifier of the obsoleted obj for the object identified by the PID.
    *
-   * @param mixed $pid
+   * @param mixed $pid_data
    *   Drupal node
    *
    * @return string
    *   The PID
    */
-  public function getObsoletedIdentifierForPid($pid) {
+  public function getObsoletedIdentifierForPid($pid_data) {
     return '';
   }
 
   /**
    * Identifier of the object that obsoletes the object identified by the PID.
    *
-   * @param mixed $pid
+   * @param mixed $pid_data
    *   Drupal node
    *
    * @return string
    *   The PID
    */
-  public function getObsoletedByIdentifierForPid($pid) {
+  public function getObsoletedByIdentifierForPid($pid_data) {
     return '';
   }
 
@@ -498,7 +484,7 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
    * This implementation supports replication.
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.ReplicationPolicy
    *
-   * @param mixed $pid
+   * @param mixed $pid_data
    *   The result of loadPid()
    *
    * @return mixed
@@ -508,7 +494,7 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
    *   - preferred_member_node : an array of Member Node DN subjects
    *   - blocked_member_node : an array of Member Node DN subjects
    */
-  public function getReplicationPolicyForPid($pid) {
+  public function getReplicationPolicyForPid($pid_data) {
     $preferred = array(
       'MN=urn:node:TheBestSecureDataStore, DC=dataone, DC=org',
       'MN=urn:node:MIT, DC=dataone, DC=org',
