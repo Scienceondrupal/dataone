@@ -44,7 +44,7 @@ function dataone_example_get_pid($node) {
  */
 function dataone_example_dataone_event($event_type, $pid) {
   $ip_address = ip_address();
-  $user_agent = _dataone_get_user_agent();
+  $user_agent = _dataone_example_get_user_agent();
   _dataone_example_log_record($pid, $event_type, time(), $ip_address, $user_agent);
 }
 
@@ -54,7 +54,7 @@ function dataone_example_dataone_event($event_type, $pid) {
 function dataone_example_node_insert($node) {
   $pid = dataone_example_get_pid($node);
   $ip_address = ip_address();
-  $user_agent = _dataone_get_user_agent();
+  $user_agent = _dataone_example_get_user_agent();
   _dataone_example_log_record($pid, 'create', $node->created, $ip_address, $user_agent);
 }
 
@@ -64,7 +64,7 @@ function dataone_example_node_insert($node) {
 function dataone_example_node_update($node) {
   $pid = dataone_example_get_pid($node);
   $ip_address = ip_address();
-  $user_agent = _dataone_get_user_agent();
+  $user_agent = _dataone_example_get_user_agent();
   _dataone_example_log_record($pid, 'update', $node->changed, $ip_address, $user_agent);
 }
 
@@ -74,7 +74,7 @@ function dataone_example_node_update($node) {
 function dataone_example_node_delete($node) {
   $pid = dataone_example_get_pid($node);
   $ip_address = ip_address();
-  $user_agent = _dataone_get_user_agent();
+  $user_agent = _dataone_example_get_user_agent();
   _dataone_example_log_record($pid, 'delete', time(), $ip_address, $user_agent);
 }
 
@@ -84,7 +84,7 @@ function dataone_example_node_delete($node) {
  * @return string
  *   The User-Agent value
  */
-function _dataone_get_user_agent() {
+function _dataone_example_get_user_agent() {
   return !empty($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
 }
 

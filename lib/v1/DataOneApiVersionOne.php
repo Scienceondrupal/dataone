@@ -9,8 +9,6 @@
  * checkSession()
  * loadPid()
  * getTypeForPid()
- * getResourceMapMetadata()
- * getResourceMapData()
  *
  * getLogRecordDataForParameters()
  *   -> MNCore.getLogRecords()
@@ -111,7 +109,21 @@ class DataOneApiVersionOne extends DataOneApi {
   const PID_TYPE_RESOURCE_MAP = 'RESOURCE';
   const PID_TYPE_METADATA = 'METADATA';
   const PID_TYPE_DATA = 'DATA';
-  const CHECKSUM_ALGORITHMS = array('Adler-32', 'CRC32', 'MD5', 'SHA-1', 'SHA-256', 'SHA-384', 'SHA-512', 'Whirlpool');
+
+  // THe supported DataONE checksum algorithms
+  public static $_CHECKSUM_ALGORITHMS = array('Adler-32', 'CRC32', 'MD5', 'SHA-1', 'SHA-256', 'SHA-384', 'SHA-512', 'Whirlpool');
+
+  // The portion of the getApiMenuPaths() array related to the current request.
+  protected $path_config;
+
+  // The response to send to the client.
+  protected $response;
+
+  // The value for the Content-Type HTTP response header.
+  protected $content_type = 'application/xml';
+
+  // The headers to set for the HTTP response.
+  protected $headers = array();
 
     /**
    * Get a representation for a given PID.
@@ -481,24 +493,6 @@ class DataOneApiVersionOne extends DataOneApi {
   }
 
   /**
-   * Alter the ResourceMap RDF/XML.
-
-   *
-   * @param mixed $pid_data
-   *   The result of loadPid() for a Resource Map Identifier
-   *
-   * @param array $elements
-   *   The content of the rdf:RDF XML
-   *
-   * @return array
-   *   The array of elements for DataOneApiXml::addXmlWriterElements()
-   */
-  protected function alterResourceMap($pid_data, $elements) {
-    // By default, return the original array.
-    return $elements;
-  }
-
-  /**
    * Get the file path or uri for streaming an object in a response.
    * @see DataOneApiVersionOne::streamResponse()
    *
@@ -514,7 +508,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   Either FALSE or a structure like a node or entity or array.
    */
   public function getObjectForStreaming($pid_data) {
-    watchdog('dataone', 'call to getObjectForStreaming() should be made by an implementing class', array(), WATCHDOG_ERROR);
+    watchdog('dataone', 'call to getObjectForStreaming() should be made by an implementing class', array(), WATCHDOG_NOTICE);
     return !empty($pid_data['stream_uri']) ? $pid_data['stream_uri'] : FALSE;
   }
 
@@ -559,8 +553,13 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The timestamp to be passed to format_date()
    */
   public function getLastModifiedDateForPid($pid_data) {
+
+    if (!empty($pid_data['modified'])) {
+      return $pid_data['modified'];
+    }
+
     watchdog('dataone', 'call to getLastModifiedDateForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
-    return !empty($pid_data['modified']) ? $pid_data['modified'] : time();
+    return time();
   }
 
   /**
@@ -573,8 +572,12 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The size of the object in bytes
    */
   public function getByteSizeForPid($pid_data) {
-    watchdog('dataone', 'call to getByteSizeForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
-    return !empty($pid_data['byte_size']) ? $pid_data['byte_size'] : -1;
+    if (!empty($pid_data['byte_size'])) {
+      return $pid_data['byte_size'];
+    }
+
+    watchdog('dataone', 'Could not find the byte size for @pid', array('@pid' => serialize($pid_data)), WATCHDOG_ERROR);
+    return -1;
   }
 
   /**
@@ -589,8 +592,12 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The format ID for the object
    */
   public function getFormatIdForPid($pid_data) {
+    if (!empty($pid_data['format_id'])) {
+      return $pid_data['format_id'];
+    }
+
     watchdog('dataone', 'call to getFormatIdForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
-    return !empty($pid_data['format_id']) ? $pid_data['format_id'] : 'application/octet-stream';
+    return 'application/octet-stream';
   }
 
   /**
@@ -633,8 +640,12 @@ class DataOneApiVersionOne extends DataOneApi {
    *   @see http://php.net/manual/en/function.hash-file.php
    */
   public function getChecksumForPid($pid_data, $algorithm) {
+    if (!empty($pid_data['checksum'])) {
+      return $pid_data['checksum'];
+    }
+
     watchdog('dataone', 'call to getChecksumForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
-    return !empty($pid_data['checksum']) ? $pid_data['checksum'] : 'unknown';
+    return 'unknown';
   }
 
   /**
@@ -647,8 +658,12 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The checksum algorithm to use for this PID
    */
   public function getChecksumAlgorithmForPid($pid_data) {
+    if (!empty($pid_data['checksum_algorithm'])) {
+      return $pid_data['checksum_algorithm'];
+    }
+
     watchdog('dataone', 'call to getChecksumAlgorithmForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
-    return !empty($pid_data['checksum_algorithm']) ? $pid_data['checksum_algorithm'] : 'MD5';
+    return 'MD5';
   }
 
   /**
@@ -662,8 +677,12 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The unsigned long value representing the serial version
    */
   public function getSerialVersionForPid($pid_data) {
+    if (!empty($pid_data['serial_version'])) {
+      return $pid_data['serial_version'];
+    }
+
     watchdog('dataone', 'call to getSerialVersionForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
-    return !empty($pid_data['serial_version']) ? $pid_data['serial_version'] : 0;
+    return 0;
   }
 
   /**
@@ -676,8 +695,12 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The Content-Type header value
    */
   public function getContentTypeForPid($pid_data) {
+    if (!empty($pid_data['content_type'])) {
+      return $pid_data['content_type'];
+    }
+
     watchdog('dataone', 'call to getContentTypeForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
-    return !empty($pid_data['content_type']) ? $pid_data['content_type'] : 'application/octet-stream';
+    return 'application/octet-stream';
   }
 
   /**
@@ -697,11 +720,11 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The submitter
    */
   public function getSubmitterForPid($pid_data) {
-    watchdog('dataone', 'call to getSubmitterForPid() should be made by an implementing class', array(), WATCHDOG_NOTICE);
     if (!empty($pid_data['submitter'])) {
       return $pid_data['submitter'];
     }
 
+    watchdog('dataone', 'call to getSubmitterForPid() could not find the submitter. defaulting to this member node.', array(), WATCHDOG_NOTICE);
     $subjects = _dataone_get_member_node_subjects(TRUE);
     return $subjects[0];
   }
@@ -719,11 +742,11 @@ class DataOneApiVersionOne extends DataOneApi {
    *   The submitter
    */
   public function getRightsHolderForPid($pid_data) {
-    watchdog('dataone', 'call to getRightsHolderForPid() should be made by an implementing class', array(), WATCHDOG_NOTICE);
     if (!empty($pid_data['rights_holder'])) {
       return $pid_data['rights_holder'];
     }
 
+    watchdog('dataone', 'call to getRightsHolderForPid() could not find the submitter. defaulting to this member node.', array(), WATCHDOG_NOTICE);
     $subjects = _dataone_get_member_node_subjects(TRUE);
     return $subjects[0];
   }
@@ -743,7 +766,6 @@ class DataOneApiVersionOne extends DataOneApi {
    *   @see getDataOnePermissions()
    */
   public function getAccessPoliciesForPid($pid_data) {
-    watchdog('dataone', 'call to getAccessPoliciesForPid() should be made by an implementing class', array(), WATCHDOG_NOTICE);
     return !empty($pid_data['access_policies']) ? $pid_data['access_policies'] : array('public' => array('read'));
   }
 
@@ -762,7 +784,6 @@ class DataOneApiVersionOne extends DataOneApi {
    *   - blocked_member_node : an array of Member Node DN subjects
    */
   public function getReplicationPolicyForPid($pid_data) {
-    watchdog('dataone', 'call to getReplicationPolicyForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
     return !empty($pid_data['replication_policy']) ? $pid_data['replication_policy'] : FALSE;
   }
 
@@ -777,7 +798,6 @@ class DataOneApiVersionOne extends DataOneApi {
    *   @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.Identifier
    */
   public function getObsoletedIdentifierForPid($pid_data) {
-    watchdog('dataone', 'call to getObsoletedIdentifierForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
     return !empty($pid_data['obsoleted_identifier']) ? $pid_data['obsoleted_identifier'] : FALSE;
   }
 
@@ -792,7 +812,6 @@ class DataOneApiVersionOne extends DataOneApi {
    *   @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.Identifier
    */
   public function getObsoletedByIdentifierForPid($pid_data) {
-    watchdog('dataone', 'call to getObsoletedByIdentifierForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
     return !empty($pid_data['obsoleted_by_identifier']) ? $pid_data['obsoleted_by_identifier'] : FALSE;
   }
 
@@ -813,7 +832,6 @@ class DataOneApiVersionOne extends DataOneApi {
    *   @see DataOneApiVersionOne::getDataOneBooleans()
    */
   public function getArchiveStatusForPid($pid_data) {
-    watchdog('dataone', 'call to getArchiveStatusForPid() should be made by an implementing class', array(), WATCHDOG_NOTICE);
     return !empty($pid_date['archive_status']) ? $pid_data['archive_status'] : FALSE;
   }
 
@@ -828,8 +846,12 @@ class DataOneApiVersionOne extends DataOneApi {
    *   Either the timestamp to be passed to format_date() or FALSE
    */
   public function getDateUploadedForPid($pid_data) {
+    if (!empty($pid_date['date_uploaded'])) {
+      return $pid_data['date_uploaded'];
+    }
+
     watchdog('dataone', 'call to getDateUploadedForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
-    return !empty($pid_date['date_uploaded']) ? $pid_data['date_uploaded'] : FALSE;
+    return FALSE;
   }
 
   /**
@@ -843,8 +865,11 @@ class DataOneApiVersionOne extends DataOneApi {
    *   Either the reference identifier or FALSE
    */
   public function getOriginMemberNode($pid_data) {
+    if (!empty($pid_data['origin_member_node'])) {
+      return $pid_data['origin_member_node'];
+    }
     watchdog('dataone', 'call to getOriginMemberNode() should be made by an implementing class', array(), WATCHDOG_ERROR);
-    return !empty($pid_data['origin_member_node']) ? $pid_data['origin_member_node'] : FALSE;
+    return FALSE;
   }
 
   /**
@@ -858,7 +883,6 @@ class DataOneApiVersionOne extends DataOneApi {
    *   Either the reference identifier or FALSE
    */
   public function getAuthoritativeMemberNode($pid_data) {
-    watchdog('dataone', 'call to getAuthoritativeMemberNode() should be made by an implementing class', array(), WATCHDOG_ERROR);
     return !empty($pid_data['authoritative_member_node']) ? $pid_data['authoritative_member_node'] : FALSE;
   }
 
@@ -890,36 +914,11 @@ class DataOneApiVersionOne extends DataOneApi {
    *   Either one of the PID types or FALSE
    */
   static public function getTypeForPid($pid_data) {
+    if (!empty($pid_data['type'])) {
+      return $pid_data['type'];
+    }
     watchdog('dataone', 'call to getTypeForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
-    return !empty($pid_data['type']) ? $pid_data['type'] : FALSE;
-  }
-
-  /**
-   * Get the metadata resource information.
-   *
-   * @param mixed $resource_map_pid_data
-   *   The result of loadPid() for a resource map PID
-   *
-   * @return array
-   *   The array with at least a metadata identifier as the key 'id'
-   */
-  static public function getResourceMapMetadata($resource_map_pid_data) {
-    watchdog('dataone', 'call to getResourceMapMetadata(@id) should be made by an implementing class', array('@id' => $resource_map_pid), WATCHDOG_NOTICE);
-    return array('id' => $resource_map_pid_data['identifier'] . '#metadataPID');
-  }
-
-  /**
-   * Get the data resource information.
-   *
-   * @param mixed $resource_map_pid_data
-   *   The result of loadPid() for a resource map PID
-   *
-   * @return array
-   *   The array with at least a data identifier as the key 'id'
-   */
-  static public function getResourceMapData($resource_map_pid_data) {
-    watchdog('dataone', 'call to getResourceMapData(@id) should be made by an implementing class', array('@id' => $resource_map_pid), WATCHDOG_NOTICE);
-    return array('id' => $resource_map_pid_data['identifier'] . '#dataPID');
+    return FALSE;
   }
 
   /**
@@ -1273,7 +1272,7 @@ class DataOneApiVersionOne extends DataOneApi {
     $stream_response = TRUE;
     try {
 
-      $pid_request_parameter = $this::getMenuPathArgument(0, 'unknown');
+      $pid_request_parameter = $pid_data['identifier'];
 
       // Do we have a valid PID?
       if (!$this->validPid($pid_data)) {
@@ -1299,7 +1298,7 @@ class DataOneApiVersionOne extends DataOneApi {
       else {
         // Allow extending classes an easier way to alter the results.
         $response = $this->getObjectForStreaming($pid_data);
-      ]
+      }
 
       // Announce the read event.
       module_invoke_all('dataone_event', 'read', $pid_request_parameter);
@@ -1366,7 +1365,7 @@ class DataOneApiVersionOne extends DataOneApi {
 
       // Do we have a valid PID?
       if (!$this->validPid($pid_data)) {
-        $pid_request_parameter = $this::getMenuPathArgument(0, 'unknown');
+        $pid_request_parameter = $pid_data['identifier'];
         DataOneApiVersionOne::throwNotFound(1060, 'Object not found.', array (), $pid_request_parameter);
       }
 
@@ -1552,7 +1551,7 @@ class DataOneApiVersionOne extends DataOneApi {
 
       // Do we have a valid PID?
       if (!$this->validPid($pid_data)) {
-        $pid_request_parameter = $this::getMenuPathArgument(0, 'unknown');
+        $pid_request_parameter = $pid_data['identifier'];
         DataOneApiVersionOne::throwNotFound(1380, 'Object not found.', array (), $pid_request_parameter);
       }
 
@@ -1578,7 +1577,7 @@ class DataOneApiVersionOne extends DataOneApi {
     }
     catch (DataOneApiVersionOneException $exc) {
       watchdog('dataone', $exc->__toString(), array(), $exc->getWatchdogCode());
-      $pid_request_parameter = $this::getMenuPathArgument(0, 'unknown');
+      $pid_request_parameter = $pid_data['identifier'];
       $exc->setPid($pid_request_parameter);
       $headers = $exc->getDescribeHeaders();
       $this->setResponseHeaders($headers);
@@ -1635,7 +1634,7 @@ class DataOneApiVersionOne extends DataOneApi {
 
       // Do we have a valid PID?
       if (!$this->validPid($pid_data)) {
-        $pid_request_parameter = $this::getMenuPathArgument(0, 'unknown');
+        $pid_request_parameter = $pid_data['identifier'];
         DataOneApiVersionOne::throwNotFound(1420, 'Object not found.', array (), $pid_request_parameter);
       }
 
@@ -1655,7 +1654,7 @@ class DataOneApiVersionOne extends DataOneApi {
 
       // Get the checksum.
       // Algorithm has a default value defined in getApiMenuPaths() if absent.
-      $algorithm = $parameters['checksumAlgorithm'];
+      $algorithm = $this->getChecksumAlgorithmForPid($pid_data);
       $checksum = $this->getChecksumForPid($pid_data, $algorithm);
 
       // Build the XML elements for the response.
@@ -1947,7 +1946,7 @@ class DataOneApiVersionOne extends DataOneApi {
     $stream_response = TRUE;
     try {
 
-      $pid_request_parameter = $this::getMenuPathArgument(0, 'unknown');
+      $pid_request_parameter = $pid_data['identifier'];
 
       // Do we have a valid PID?
       if (!$this->validPid($pid_data)) {
@@ -1975,7 +1974,7 @@ class DataOneApiVersionOne extends DataOneApi {
       else {
         // Allow extending classes an easier way to alter the results.
         $response = $this->getObjectForStreaming($pid_data);
-      ]
+      }
 
       // Announce the replication event.
       module_invoke_all('dataone_event', 'replicate', $pid_request_parameter);
@@ -2224,6 +2223,8 @@ class DataOneApiVersionOne extends DataOneApi {
 
   /**
    * Get the X.509 Certificate data.
+   * Requires the web server to pass these along to PHP.
+   * For Apache, set "SSLOptions +ExportCertData"
    *
    * @return array
    *   The session authentication data for a request
@@ -2608,10 +2609,10 @@ class DataOneApiVersionOne extends DataOneApi {
    * @return string
    *   The XML
    */
-  public function getXml($elements) {
-    $xml = $this->generateXmlWriter();
-    $this->addXmlWriterElements($xml, $elements);
-    return $this->printXmlWriter($xml);
+  static public function getXml($elements) {
+    $xml = DataOneApiVersionOne::generateXmlWriter();
+    DataOneApiVersionOne::addXmlWriterElements($xml, $elements);
+    return DataOneApiVersionOne::printXmlWriter($xml);
   }
 
   /**
@@ -2683,8 +2684,18 @@ class DataOneApiVersionOne extends DataOneApi {
   /**
    * Generate a Resource Map.
    *
-   * @param mixed $pid_data
-   *   The result of loadPid()
+   * @param array $pid_data
+   *   The resource map PID
+   *
+   * @param array $metadata
+   *   An array with keys
+   *     'id' => metadata PID (required)
+   *     'description' => description of the metadata (optional)
+   *
+   * @param array $data
+   *   An array with keys
+   *     'id' => data PID (required)
+   *     'description' => description of dataset (optional)
    *
    * @return string
    *   The resource map as RDF/XML
@@ -2701,23 +2712,19 @@ class DataOneApiVersionOne extends DataOneApi {
         '_keys' => array(
           'rdf:Description' => '_resource_',
         ),
-        '_resources' => array(),
       ),
     );
 
     // Add the namespaces to the RDF.
-    $ns = $this->resourceMapNamespaces();
+    $ns = DataOneApiVersionOne::resourceMapNamespaces();
     foreach ($ns as $prefix => $uri) {
       $resource_map['rdf:RDF']['_attrs']['xmlns:' . $prefix] = $uri;
     }
 
-    // Get the data and metadata identifiers and optional descriptions.
-    $metadata = $this->getResourceMapMetadata($pid_data);
-    $data = $this->getResourceMapData($pid_data);
-
     // Define the URIs.
-    $metadata_uri = $dataone_resolver_uri . $metadata['id'];
-    $data_uri = $dataone_resolver_uri . $data['id'];
+    $resource_map_pid = $pid_data['identifier'];
+    $metadata_uri = $dataone_resolver_uri . $pid_data['metadata']['identifier'];
+    $data_uri = $dataone_resolver_uri . $pid_data['data']['identifier'];
     $resource_map_pid_uri = $dataone_resolver_uri . $resource_map_pid;
     $aggregation_id = $resource_map_pid_uri . '#aggregation';
 
@@ -2736,7 +2743,7 @@ class DataOneApiVersionOne extends DataOneApi {
         'rdf:about' => $resource_map_pid_uri,
       ),
       'rdf:type' => array(
-        '_attrs' => ('rdf:resource' => 'http://www.openarchives.org/ore/terms/ResourceMap'),
+        '_attrs' => array('rdf:resource' => 'http://www.openarchives.org/ore/terms/ResourceMap'),
       ),
       'dcterms:identifier' => $resource_map_pid,
       'dc:format' => 'application/rdf+xml',
@@ -2761,16 +2768,16 @@ class DataOneApiVersionOne extends DataOneApi {
         'rdf:about' => $aggregation_id,
       ),
       'rdf:type' => array(
-        '_attrs' => ('rdf:resource' => 'http://www.openarchives.org/ore/terms/Aggregation'),
+        '_attrs' => array('rdf:resource' => 'http://www.openarchives.org/ore/terms/Aggregation'),
       ),
       'ore:isDescribedBy' => array(
         '_attrs' => array('rdf:resource' => $resource_map_pid),
       ),
       '_aggregates_data' => array(
-        '_attrs' => ('rdf:resource' => $data_uri),
+        '_attrs' => array('rdf:resource' => $data_uri),
       ),
       '_aggregates_metadata' => array(
-        '_attrs' => ('rdf:resource' => $metadata_uri),
+        '_attrs' => array('rdf:resource' => $metadata_uri),
       ),
     );
 
@@ -2779,11 +2786,11 @@ class DataOneApiVersionOne extends DataOneApi {
       '_attrs' => array(
         'rdf:about' => $metadata_uri,
       ),
-      'cito:documents' => array('_attrs' => 'rdf:resource' => $data_uri),
-      'dcterms:identifier' => $metadata['id'],
+      'cito:documents' => array('_attrs' => array('rdf:resource' => $data_uri)),
+      'dcterms:identifier' => $pid_data['metadata']['identifier'],
     );
-    if (!empty($metadata['description'])) {
-      $resource_map['rdf:RDF']['_resource_metadata_id']['dcterms:description'] = DataOneApiXml::prepareXMLString($metadata['description']);
+    if (!empty($pid_data['metadata']['description'])) {
+      $resource_map['rdf:RDF']['_resource_metadata_id']['dcterms:description'] = DataOneApiXml::prepareXMLString($pid_data['metadata']['description']);
     }
 
     // The data.
@@ -2791,17 +2798,14 @@ class DataOneApiVersionOne extends DataOneApi {
       '_attrs' => array(
         'rdf:about' => $data_uri,
       ),
-      'cito:isDocumentedBy' => array('_attrs' => 'rdf:resource' => $data_uri),
-      'dcterms:identifier' => $data['id'],
+      'cito:isDocumentedBy' => array('_attrs' => array('rdf:resource' => $data_uri)),
+      'dcterms:identifier' => $pid_data['data']['identifier'],
     );
-    if (!empty($data['description'])) {
-      $resource_map['rdf:RDF']['_resource_data_id']['dcterms:description'] = DataOneApiXml::prepareXMLString($data['description']);
+    if (!empty($pid_data['data']['description'])) {
+      $resource_map['rdf:RDF']['_resource_data_id']['dcterms:description'] = DataOneApiXml::prepareXMLString($pid_data['data']['description']);
     }
 
-    // Allow for alterations to the base RDF.
-    $resource_map = $this->alterResourceMap($pid_data, $resource_map);
-
-    return $this->getXml($resource_map);
+    return DataOneApiVersionOne::getXml($resource_map);
   }
 
   /**
@@ -3173,7 +3177,7 @@ class DataOneApiVersionOne extends DataOneApi {
       ),
       'MNRead.get() & MNRead.describe()' => array(
         'paths' => array('/object/%dataone'),
-        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid'),
+        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid', '/object/'),
         'method' => array(
           'GET' => 'MNRead.get()',
           'HEAD' => 'MNRead.describe()',
@@ -3185,7 +3189,7 @@ class DataOneApiVersionOne extends DataOneApi {
       ),
       'MNRead.getSystemMetadata()' => array(
         'paths' => array('/meta/%dataone'),
-        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid'),
+        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid', '/meta/'),
         'method' => array('GET' => 'MNRead.getSystemMetadata()'),
         'access callback' => 'dataone_api_access',
         'access arguments' => array(DATAONE_API_VERSION_1, 1),
@@ -3194,7 +3198,7 @@ class DataOneApiVersionOne extends DataOneApi {
       ),
       'MNRead.getChecksum()' => array(
         'paths' => array('/checksum/%dataone'),
-        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid'),
+        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid', '/checksum/'),
         'method' => array('GET' => 'MNRead.getChecksum()'),
         'access callback' => 'dataone_api_access',
         'access arguments' => array(DATAONE_API_VERSION_1, 1),
@@ -3204,8 +3208,6 @@ class DataOneApiVersionOne extends DataOneApi {
           'checksumAlgorithm' => array(
             'required' => FALSE,
             'max_cardinality' => 1,
-            'default_value' => _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_CHECKSUM_ALGORITHM),
-            'allowed_values' => array(_dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_CHECKSUM_ALGORITHM)),
           ),
         ),
       ),
@@ -3262,7 +3264,7 @@ class DataOneApiVersionOne extends DataOneApi {
       ),
       'MNRead.getReplica()' => array(
         'paths' => array('/replica/%dataone'),
-        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid'),
+        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid', '/replica/'),
         'method' => array('GET' => 'MNRead.getReplica()'),
         'access callback' => 'dataone_api_access',
         'access arguments' => array(DATAONE_API_VERSION_1),
@@ -3359,29 +3361,6 @@ class DataOneApiVersionOne extends DataOneApi {
     return substr($full_path, strlen($endpoint_path));
   }
 
-    /**
-   * Get a menu path argument, before any load function.
-   *
-   * @param integer $argument_index
-   *   Index of array_keys() of the menu items load_functions
-   *
-   * @param string $default_value
-   *   THe default value to return in case the path argument doesn't exist
-   *
-   * @return string
-   *   The value of the menu path page argument
-   */
-  protected function getMenuPathArgument($argument_index, $default_value = '') {
-    // The Drupal menu item.
-    $menu_item = menu_get_item();
-    // The array of path indexes which gives us the original_map path index.
-    $load_parts = !empty($menu_item['load_functions']) ? array_keys($menu_item['load_functions']) : array();
-    // Can we find the originally requested argument, pre-load.
-    $has_original_argument = !empty($load_parts[$argument_index]) && !empty($menu_item['original_map'][$load_parts[$argument_index]]);
-
-    return $has_original_argument ? $menu_item['original_map'][$load_parts[$argument_index]] : $default_value;
-  }
-
   /**
    * Get Path information for a path.
    *
@@ -3454,18 +3433,4 @@ class DataOneApiVersionOne extends DataOneApi {
     // Set the path configuration.
     $this->path_config = $path_config;
   }
-
-  /*** CLASS PROPERTIES ***/
-
-  // The portion of the getApiMenuPaths() array related to the current request.
-  protected $path_config;
-
-  // The response to send to the client.
-  protected $response;
-
-  // The value for the Content-Type HTTP response header.
-  protected $content_type = 'application/xml';
-
-  // The headers to set for the HTTP response.
-  protected $headers = array();
 }

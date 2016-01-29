@@ -42,7 +42,84 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
    */
   static public function loadPid($pid) {
     $node = node_load($pid);
-    return $node ? $node : FALSE;
+    if (!$node) {
+      return FALSE;
+    }
+
+    // Determine the type of resource: PID_TYPE_DATA, PID_TYPE_METADATA, PID_TYPE_RESOURCE_MAP
+    $type = PID_TYPE_DATA;
+
+    // Pick an 'Id' from listings at: https://cn.dataone.org/cn/v1/formats.
+    $format_id = 'text/html';
+
+    // Check for PID type in URL.
+    $pid_parts = explode('#', $pid);
+    if (count($pid_parts) == 2) {
+      // then the PID sent was "node ID" . # . "(PID_TYPE)"
+      $pid = $pid_parts[0];
+      $type = $pid_parts[1];
+    }
+
+    switch($type) {
+      case PID_TYPE_RESOURCE_MAP:
+
+        break;
+
+      case PID_TYPE_METADATA:
+
+        break;
+
+      case PID_TYPE_DATA:
+      default:
+        $format_id = 'text/html';
+    }
+
+    $uri_array = node_uri($pid_data);
+    $stream_uri = url($uri_array['path'], array('absolute' => TRUE));
+
+    return array(
+      'identifier' => $pid,
+      // @see getTypeForPid().
+      'type' => $type,
+      // @see getObjectForStreaming().
+      'stream_uri' => $stream_uri,
+      // @see getLastModifiedDateForPid().
+      'modified' => time(),
+      // @see getByteSizeForPid().
+      'byte_size' => -1,
+      // @see getFormatIdForPid().
+      'format_id' => 'application/octet-stream',
+      // @see getChecksumForPid().
+      'checksum' => 'unknown',
+      // @see getChecksumAlgorithmForPid().
+      'checksum_algorithm' => 'MD5',
+      // @see getSerialVersionForPid().
+      // @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.SystemMetadata.serialVersion
+      'serial_version' => $node->vid,
+      // @see getContentTypeForPid().
+      // The content type HTTP header value to set when streaming a resource.
+      'content_type' => 'application/octet-stream',
+      // @see getSubmitterForPid().
+      'submitter' => $subjects[0],
+      // @see getRightsHolderForPid().
+      'rights_holder' => $subjects[0],
+      // @see getAccessPoliciesForPid().
+      'access_policies' => array('public' => array('read')),
+      // @see getReplicationPolicyForPid().
+      'replication_policy' => FALSE,
+      // @see getObsoletedIdentifierForPid().
+      'obsoleted_identifier' => FALSE,
+       // @see getObsoletedByIdentifierForPid().
+      'obsoleted_by_identifier' => FALSE,
+      // @see getArchiveStatusForPid().
+      'archive_status' => FALSE,
+      // @see getDateUploadedForPid().
+      'date_uploaded' => FALSE,
+      // @see getOriginMemberNode().
+      'origin_member_node' => FALSE,
+      // @see getAuthoritativeMemberNode().
+      'authoritative_member_node' => FALSE,
+    );
   }
 
   /**
@@ -62,182 +139,6 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
   }
 
   /**
-   * Get the log records for MNCore.getLogRecords().
-   *
-   * @param integer $start
-   *   The index into the total result at which to start
-   *
-   * @param integer $max_count
-   *   The maximum number of records to return
-   *
-   * @param mixed $from_date
-   *   Either a timestamp like time() or FALSE
-   *
-   * @param mixed $to_date
-   *   Either a timestamp like time() or FALSE
-   *
-   * @param mixed $event
-   *   Either an event type from DataOneApiVersionApi::getDataOneEventTypes() or
-   *   FALSE
-   *   Values here are validated when calling _buildLogEntry()
-   *
-   * @param mixed $pid_filter
-   *   Either a whole or partial PID from which results will start with this s
-   *   tring or FALSE. Support for this parameter is optional and MAY be ignored
-   *   with no warning.
-   *
-   * @return array
-   *   Formatted with keys
-   *    - 'entries' => array(), // the entries satisfying the parameters
-   *    - 'total' => integer, // the total # of entries that satisfy the params
-   */
-  protected function getLogRecordDataForParameters($start, $max_count, $from_date = FALSE, $to_date = FALSE, $event = FALSE, $pid_filter = FALSE) {
-
-    // Keep track of two queries, one for calculating the total number of
-    // records and another for the actual records matching the given criteria.
-
-    // Query body for both count and select queries.
-    // Add a WHERE clause to make optional parameters easier to append.
-    $query = ' FROM {' . DATAONE_EXAMPLE_TABLE_LOG . '} WHERE pid IS NOT NULL';
-    // Keep track of query arguments.
-    $args = array();
-
-    // From date.
-    if ($from_date) {
-      $query .= ' AND timestamp >= :from';
-      $args[':from'] = $from_date;
-    }
-    // To date.
-    if ($to_date) {
-      $query .= ' AND timestamp <= :to';
-      $args[':to'] = $to_date;
-    }
-    // Event filter.
-    if ($event) {
-      $query .= ' AND event = :event';
-      $args[':event'] = $event;
-    }
-    // PID filter.
-    if ($pid_filter) {
-      $query .= ' AND pid LIKE :pid';
-      $args[':pid'] = $pid_filter . '%';
-    }
-
-    // Run the queries.
-    $count_query = 'SELECT COUNT(*)' . $query;
-    $total = db_query($count_query, $args)->fetchField();
-    $select_query = 'SELECT *' . $query . ' ORDER BY timestamp';
-    $records = db_query_range($select_query, $start, $max_count, $args)->fetchAll();
-
-    // Initialize the array to return.
-    $entries = array(
-      'total' => $total,
-      'entries' => array(),
-    );
-    // If we have records, format them, and add them to the returning array.
-    if ($records) {
-      // Set the subject of each log record, which is sufficient for Tier 1 API.
-      $subject = $this->getMemberNodeSubject();
-      // Loop through all log records.
-      foreach ($records as $record) {
-        $entries['entries'][] = $this->_buildLogEntry($record->entry_id, $record->pid, $record->timestamp, $record->event, $subject, $record->ip_address, $record->user_agent);
-      }
-    }
-
-    return $entries;
-  }
-
-  /**
-   * Get the list of object PIDs given some optinal parameters.
-   *
-   * @param integer $start
-   *   The index into the total result at which to start
-   *
-   * @param integer $max_count
-   *   The maximum number of records to return
-   *
-   * @param integer $modified_from_date
-   *   The date from which results start formatted as the result of strtotime()
-   *
-   * @param integer $modified_to_date
-   *   The date to which results end formatted as the result of strtotime()
-   *
-   * @param string $format_id
-   *   Restrict results to the specified object format identifier.
-   *   @see https://cn.dataone.org/cn/v1/formats
-   *
-   * @param string $replica_status
-   *    Indicates if replicated objects should be returned in the list (i.e. any
-   *    entries present in the SystemMetadata.replica, objects that have been
-   *    replicated to this member node). If false, then no objects that have
-   *    been replicated should be returned. If true, then any objects can be
-   *    returned, regardless of replication status. If not present, then the
-   *    replicaStatus filter should be ignored.
-   *    For Tier 1 API implmentations, this can be ignored.
-   *
-   * @return array
-   */
-  protected function getListOfObjectsForParameters($start, $max_count, $modified_from_date = FALSE, $modified_to_date = FALSE, $format_id = FALSE, $replica_status = FALSE) {
-
-
-    // Keep track of two queries, one for calculating the total number of
-    // records and another for the actual records matching the given criteria.
-    $query_start = "SELECT nid";
-    $count_start = "SELECT COUNT(nid)";
-    // Keep track of query arguments.
-    $args = array();
-
-    $query = ' FROM {node} WHERE nid IS NOT NULL';
-    // From date.
-    if ($modified_from_date) {
-      $query .= ' AND changed >= :from';
-      $args[':from'] = $modified_from_date;
-    }
-    // To date.
-    if ($modified_to_date) {
-      $query .= ' AND changed <= :to';
-      $args[':to'] = $modified_to_date;
-    }
-    // Format ID.
-    if ($format_id) {
-      // Since our formatId is always 'text/html', no need to filter.
-    }
-    // Replica Status.
-    if ($replica_status) {
-      // Tier 1 implementations don't replicate nodes, it is safe to ignore.
-    }
-
-    $query .= ' ORDER BY nid';
-
-    // Run the queries.
-    $total = db_query($count_start . $query, $args)->fetchField();
-    $records = db_query_range($query_start . $query, $start, $max_count, $args)->fetchAllAssoc('nid');
-
-    // Initialize the array to return.
-    $objects = array(
-      'total' => $total,
-      'objects' => array(),
-    );
-    // If we have records, format them, and add them to the returning array.
-    if (!empty($records)) {
-      $nids = array_keys($records);
-      $nodes = node_load_multiple($nids);
-      // Loop through all log records.
-      foreach ($nodes as $node) {
-        $pid = $this->getPidForObject($node);
-        $format_id = $this->getFormatIdForPid($node);
-        $algorithm = _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_CHECKSUM_ALGORITHM);
-        $checksum = $this->getChecksumForPid($node, $algorithm);
-        $metadata_modified_date = $node->changed;
-        $size = $this->getByteSizeForPid($node);
-        $objects['objects'][] = $this->_buildObjectInfo($pid, $format_id, $checksum, $algorithm, $metadata_modified_date, $size);
-      }
-    }
-
-    return $objects;
-  }
-
-  /**
    * Handle a synchronizationFailed() call from a Coordinating Node (CN).
    *
    * @param DataOneApiVersionOneException $exc
@@ -251,56 +152,6 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
     // Do something??
     // Remember that dataone_example_dataone_event() will log the sync failed.
     return TRUE;
-  }
-
-  /**
-   * Get the file path or uri for MNRead.get() & MNRead.getReplica().
-   * @see DataOneApiVersionOne::streamResponse()
-   *
-   * This function should be public so that it can be called by the menu loader.
-   * This function is static so that it can be called by
-   * dataone_api_v1_pid_load().
-   * @see dataone_api_v1_pid_load
-   *
-   * @param mixed $pid_data
-   *   The Drupal node
-   *
-   * @param mixed
-   *   Either FALSE or a structure like a node or entity or array.
-   */
-  public function getObjectForStreaming($pid_data) {
-    $uri_array = node_uri($pid_data);
-    return url($uri_array['path'], array('absolute' => TRUE));
-  }
-
-  /**
-   * Get the serial version of the object identified by the given PID.
-   * In this case, the node version ID.
-   *
-   * @param mixed $pid_data
-   *   The Drupal node
-   *
-   * @return integer
-   *   The node version ID
-   */
-  public function getSerialVersionForPid($pid_data) {
-    return $pid_data->vid;
-  }
-
-  /**
-   * Get the format ID of the object identified by the given PID.
-   * @see https://cn.dataone.org/cn/v1/formats
-   * @see getObjectForStreaming()
-   *
-   * @param mixed $pid_data
-   *   The Drupal node
-   *
-   * @return string
-   *   The format ID for the object
-   */
-  public function getFormatIdForPid($pid_data) {
-    // Since getObjectForStreaming() returns HTML...
-    return 'text/html';
   }
 
   /**
@@ -572,6 +423,182 @@ class ExampleDataOneApiVersionOne extends DataOneApiVersionOne {
     if (empty($session)) {
       DataOneApiVersionOne::throwInvalidToken($invalid_token_code, 'No authentication information provided');
     }
+  }
+
+  /**
+   * Get the log records for MNCore.getLogRecords().
+   *
+   * @param integer $start
+   *   The index into the total result at which to start
+   *
+   * @param integer $max_count
+   *   The maximum number of records to return
+   *
+   * @param mixed $from_date
+   *   Either a timestamp like time() or FALSE
+   *
+   * @param mixed $to_date
+   *   Either a timestamp like time() or FALSE
+   *
+   * @param mixed $event
+   *   Either an event type from DataOneApiVersionApi::getDataOneEventTypes() or
+   *   FALSE
+   *   Values here are validated when calling _buildLogEntry()
+   *
+   * @param mixed $pid_filter
+   *   Either a whole or partial PID from which results will start with this s
+   *   tring or FALSE. Support for this parameter is optional and MAY be ignored
+   *   with no warning.
+   *
+   * @return array
+   *   Formatted with keys
+   *    - 'entries' => array(), // the entries satisfying the parameters
+   *    - 'total' => integer, // the total # of entries that satisfy the params
+   */
+  protected function getLogRecordDataForParameters($start, $max_count, $from_date = FALSE, $to_date = FALSE, $event = FALSE, $pid_filter = FALSE) {
+
+    // Keep track of two queries, one for calculating the total number of
+    // records and another for the actual records matching the given criteria.
+
+    // Query body for both count and select queries.
+    // Add a WHERE clause to make optional parameters easier to append.
+    $query = ' FROM {' . DATAONE_EXAMPLE_TABLE_LOG . '} WHERE pid IS NOT NULL';
+    // Keep track of query arguments.
+    $args = array();
+
+    // From date.
+    if ($from_date) {
+      $query .= ' AND timestamp >= :from';
+      $args[':from'] = $from_date;
+    }
+    // To date.
+    if ($to_date) {
+      $query .= ' AND timestamp <= :to';
+      $args[':to'] = $to_date;
+    }
+    // Event filter.
+    if ($event) {
+      $query .= ' AND event = :event';
+      $args[':event'] = $event;
+    }
+    // PID filter.
+    if ($pid_filter) {
+      $query .= ' AND pid LIKE :pid';
+      $args[':pid'] = $pid_filter . '%';
+    }
+
+    // Run the queries.
+    $count_query = 'SELECT COUNT(*)' . $query;
+    $total = db_query($count_query, $args)->fetchField();
+    $select_query = 'SELECT *' . $query . ' ORDER BY timestamp';
+    $records = db_query_range($select_query, $start, $max_count, $args)->fetchAll();
+
+    // Initialize the array to return.
+    $entries = array(
+      'total' => $total,
+      'entries' => array(),
+    );
+    // If we have records, format them, and add them to the returning array.
+    if ($records) {
+      // Set the subject of each log record, which is sufficient for Tier 1 API.
+      $subject = $this->getMemberNodeSubject();
+      // Loop through all log records.
+      foreach ($records as $record) {
+        $entries['entries'][] = $this->_buildLogEntry($record->entry_id, $record->pid, $record->timestamp, $record->event, $subject, $record->ip_address, $record->user_agent);
+      }
+    }
+
+    return $entries;
+  }
+
+  /**
+   * Get the list of object PIDs given some optinal parameters.
+   *
+   * @param integer $start
+   *   The index into the total result at which to start
+   *
+   * @param integer $max_count
+   *   The maximum number of records to return
+   *
+   * @param integer $modified_from_date
+   *   The date from which results start formatted as the result of strtotime()
+   *
+   * @param integer $modified_to_date
+   *   The date to which results end formatted as the result of strtotime()
+   *
+   * @param string $format_id
+   *   Restrict results to the specified object format identifier.
+   *   @see https://cn.dataone.org/cn/v1/formats
+   *
+   * @param string $replica_status
+   *    Indicates if replicated objects should be returned in the list (i.e. any
+   *    entries present in the SystemMetadata.replica, objects that have been
+   *    replicated to this member node). If false, then no objects that have
+   *    been replicated should be returned. If true, then any objects can be
+   *    returned, regardless of replication status. If not present, then the
+   *    replicaStatus filter should be ignored.
+   *    For Tier 1 API implmentations, this can be ignored.
+   *
+   * @return array
+   */
+  protected function getListOfObjectsForParameters($start, $max_count, $modified_from_date = FALSE, $modified_to_date = FALSE, $format_id = FALSE, $replica_status = FALSE) {
+
+
+    // Keep track of two queries, one for calculating the total number of
+    // records and another for the actual records matching the given criteria.
+    $query_start = "SELECT nid";
+    $count_start = "SELECT COUNT(nid)";
+    // Keep track of query arguments.
+    $args = array();
+
+    $query = ' FROM {node} WHERE nid IS NOT NULL';
+    // From date.
+    if ($modified_from_date) {
+      $query .= ' AND changed >= :from';
+      $args[':from'] = $modified_from_date;
+    }
+    // To date.
+    if ($modified_to_date) {
+      $query .= ' AND changed <= :to';
+      $args[':to'] = $modified_to_date;
+    }
+    // Format ID.
+    if ($format_id) {
+      // Since our formatId is always 'text/html', no need to filter.
+    }
+    // Replica Status.
+    if ($replica_status) {
+      // Tier 1 implementations don't replicate nodes, it is safe to ignore.
+    }
+
+    $query .= ' ORDER BY nid';
+
+    // Run the queries.
+    $total = db_query($count_start . $query, $args)->fetchField();
+    $records = db_query_range($query_start . $query, $start, $max_count, $args)->fetchAllAssoc('nid');
+
+    // Initialize the array to return.
+    $objects = array(
+      'total' => $total,
+      'objects' => array(),
+    );
+    // If we have records, format them, and add them to the returning array.
+    if (!empty($records)) {
+      $nids = array_keys($records);
+      $nodes = node_load_multiple($nids);
+      // Loop through all log records.
+      foreach ($nodes as $node) {
+        $pid = $this->getPidForObject($node);
+        $format_id = $this->getFormatIdForPid($node);
+        $algorithm = _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_CHECKSUM_ALGORITHM);
+        $checksum = $this->getChecksumForPid($node, $algorithm);
+        $metadata_modified_date = $node->changed;
+        $size = $this->getByteSizeForPid($node);
+        $objects['objects'][] = $this->_buildObjectInfo($pid, $format_id, $checksum, $algorithm, $metadata_modified_date, $size);
+      }
+    }
+
+    return $objects;
   }
 
   /**
