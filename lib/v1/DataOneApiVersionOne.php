@@ -995,10 +995,9 @@ class DataOneApiVersionOne extends DataOneApi {
       $to_date = !empty($parameters['toDate']) ? $parameters['toDate'] : FALSE;
       $event = !empty($parameters['event']) ? $parameters['event'] : FALSE;
       $pid_filter = !empty($parameters['pidFilter']) ? $parameters['pidFilter'] : FALSE;
-      $start = intval($parameters['start']);
-      $max_count = intval($parameters['count']);
+      $start = !empty($parameters['start']) ? intval($parameters['start']) : FALSE;
+      $max_count = !empty($parameters['count']) ? intval($parameters['count']) : FALSE;
 
-      dpm($parameters);
       // Make us reif both fromDate and toDate exist that fromDate is less than.
       if (($from_date && $to_date) && $from_date > $to_date){
         $trace = array('fromDate' => $from_date, 'toDate' => $to_date);
