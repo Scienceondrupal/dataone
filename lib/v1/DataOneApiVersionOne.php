@@ -2211,15 +2211,13 @@ class DataOneApiVersionOne extends DataOneApi {
     // Check for required or invalid parameters.
     foreach ($path_info['query_parameters'] as $query_param => $parameter_info) {
       // Any missing required parameters?
-      if (TRUE == $parameter_info['required'] && empty($parameters[$query_param])) {
+      $missing_param = !array_key_exists($query_param, $parameters);
+      if (TRUE == $parameter_info['required'] && $missing_param) {
         DataOneApiVersionOne::throwInvalidRequest($invalid_request_code, 'Required parameter "$query_param" is missing.');
       }
       // Set any default values for missing parameters.
-      if (isset($parameter_info['default_value']) && empty($parameters[$query_param])) {
-        // Make sure the param isn't an integer set to '0'.
-        if ($parameter_info['type'] != 'integer' || intval($parameters[$query_param]) != 0) {
-          $parameters[$query_param] = $parameter_info['default_value'];
-        }
+      if ($missing_param && isset($parameter_info['default_value'])) {
+        $parameters[$query_param] = $parameter_info['default_value'];
       }
     }
 
