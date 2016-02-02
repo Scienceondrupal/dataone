@@ -94,14 +94,12 @@ class DataOneApiVersionOne extends DataOneApi {
    * @param string $api_function
    *   The DataONE API function being called by this request.
    *
-   * @param mixed
-   *   Either DATAONE_API_LOADER_FAILED or a representation of a loaded PID.
+   * @param array
+   *   A representation of a loaded PID with 'valid' key as BOOL for validation.
    */
   static public function loadPid($pid, $api_function = '') {
     global $base_url;
     watchdog('dataone', 'call to loadPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
-    // If the $pid cannot be loaded or found, return DATAONE_API_LOADER_FAILED
-    // for DataOneApiVersionOne::validPid().
 
     // Handle loading of PID data differently for the called function.
     switch($api_function) {
@@ -117,6 +115,8 @@ class DataOneApiVersionOne extends DataOneApi {
 
     return array(
       'identifier' => $pid,
+      // @see validPid().
+      'valid' => FALSE,
       // @see getTypeForPid().
       'type' => FALSE,
       // @see getObjectForStreaming().
@@ -255,7 +255,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   Either FALSE or TRUE
    */
   static public function validPid($pid_data) {
-    return DATAONE_API_LOADER_FAILED !== $pid_data;
+    return array_key_exists('valid', $pid_data) && TRUE == $pid_data['valid'];
   }
 
   /**

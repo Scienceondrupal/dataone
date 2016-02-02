@@ -83,8 +83,10 @@ function dataone_load($path_argument, $version_id, $loader_function, $api_path, 
   $payload = $class::$loader_function($pid, $api_function);
   // If a wildcard loader function returns FALSE, it would be the equivalent of
   // page not found. To handle this, we must pass something else so that the API
-  // can process the appropriate exception.
-  return $payload ? $payload : DATAONE_API_LOADER_FAILED;
+  // can process the appropriate exception. In this case, pass the pid as
+  // 'identifier' and FALSE as 'valid'.
+
+  return $payload ? $payload : array('identifier' => $pid, 'valid' => FALSE);
 }
 
 /**
