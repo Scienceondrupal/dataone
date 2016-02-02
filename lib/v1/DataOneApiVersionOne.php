@@ -998,6 +998,7 @@ class DataOneApiVersionOne extends DataOneApi {
       $start = intval($parameters['start']);
       $max_count = intval($parameters['count']);
 
+      dpm($parameters);
       // Make us reif both fromDate and toDate exist that fromDate is less than.
       if (($from_date && $to_date) && $from_date > $to_date){
         $trace = array('fromDate' => $from_date, 'toDate' => $to_date);
@@ -2216,7 +2217,10 @@ class DataOneApiVersionOne extends DataOneApi {
       }
       // Set any default values for missing parameters.
       if (isset($parameter_info['default_value']) && empty($parameters[$query_param])) {
-        $parameters[$query_param] = $parameter_info['default_value'];
+        // Make sure the param isn't an integer set to '0'.
+        if ($parameter_info['type'] != 'integer' || intval($parameters[$query_param]) != 0) {
+          $parameters[$query_param] = $parameter_info['default_value'];
+        }
       }
     }
 
