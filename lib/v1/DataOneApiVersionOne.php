@@ -6,9 +6,16 @@
  *
  * FUNCTIONS TO OVERRIDE:
  *
+ * construct()
  * loadPid()
+ * getListOfObjectsForParameters()
  * getLogRecordDataForParameters()
  * handleSyncFailed()
+ *
+ * RECOMMENDED OVERRIDES:
+ *
+ * validPid()
+ * getSession()
  *
  * === NOTES ===
  *
