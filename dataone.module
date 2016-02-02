@@ -55,27 +55,32 @@ define('DATAONE_API_LOADER_FAILED', 'dataone_PID_load_fail');
  * @param string $loader_function
  *   Loader function in the DataONE API class defined in _dataone_api_versions()
  *
- * @param string $dataone_api_path
+ * @param string $api_path
  *   The DataONE API path that was called
+ *
+ * @param string $api_function
+ *   For convenience of knowing what DataONE API method is being called.
  *
  * @return mixed
  *   Whatever is relevant to the loader
  */
-function dataone_load($path_argument, $version_id, $loader_function, $dataone_api_path) {
+function dataone_load($path_argument, $version_id, $loader_function, $api_path, $api_function) {
+  $pid = urldecode($path_argument);
 
   // Handle $path_arguments that should contain '/'.
   // Get the requested path.
   $request_path = $_GET['q'];
+
   // Where the DataONE API path starts.
-  $api_path_pos = strrpos($request_path, $dataone_api_path);
+  $api_path_pos = strrpos($request_path, $api_path);
   if ($api_path_pos) {
-    $index = $api_path_pos + strlen($dataone_api_path);
-    $path_argument = substr($request_path, $index);
+    $index = $api_path_pos + strlen($api_path);
+    $pid = substr($request_path, $index);
   }
 
   // Figure out which class to call.
   $class = _dataone_api_version_class_name($version_id);
-  $payload = $class::$loader_function($path_argument);
+  $payload = $class::$loader_function($pid, $api_function);
   // If a wildcard loader function returns FALSE, it would be the equivalent of
   // page not found. To handle this, we must pass something else so that the API
   // can process the appropriate exception.

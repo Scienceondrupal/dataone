@@ -6,70 +6,9 @@
  *
  * FUNCTIONS TO OVERRIDE:
  *
- * checkSession()
  * loadPid()
- * getTypeForPid()
- *
  * getLogRecordDataForParameters()
- *   -> MNCore.getLogRecords()
- *
- * alterMemberNodeCapabilities()
- *   -> MNCore.getCapabilities()
- *
- * getObjectForStreaming()
- *   -> MNRead.get()
- *
- *   related functions to implement:
- *    - streamResponse()
- *    - getContentTypeForPid()
- *
- * alterSystemMetadata($pid, $elements)
- *   -> MNRead.getSystemMetadata()
- *
- *   related functions to implement:
- *    - getSerialVersionForPid()
- *    - getPid()
- *    - getFormatIdForPid()
- *    - getByteSizeForPid()
- *    - getChecksumForPid()
- *    - getChecksumAlgorithmForPid()
- *    - getSubmitterForPid()
- *    - getRightsHolderForPid()
- *    - getAccessPoliciesForPid()
- *    - getReplicationPolicyForPid()
- *    - getObsoletedIdentifierForPid()
- *    - getObsoletedByIdentifierForPid()
- *    - getDateUploadedForPid()
- *    - getLastModifiedDateForPid()
- *    - getOriginMemberNode()
- *    - getAuthoritativeMemberNode()
- *
- * getDescribeHeaders()
- *   -> MNRead.describe()
- *
- *   related functions to implement:
- *    - getLastModifiedDateForPid()
- *    - getByteSizeForPid()
- *    - getFormatIdForPid()
- *    - getChecksumForPid()
- *    - getSerialVersionForPid()
- *    - getContentTypeForPid()
- *
- * getChecksumForPid()
- *    -> MNRead.getChecksum()
- *
- * getListOfObjectsForParameters()
- *   -> MNRead.listObjects()
- *
  * handleSyncFailed()
- *   -> synchronizationFailed()
- *
- * getObjectForStreaming()
- *   -> getReplica()
- *
- *   related functions to implement:
- *    - streamResponse()
- *    - getContentTypeForPid()
  *
  * === NOTES ===
  *
@@ -125,7 +64,7 @@ class DataOneApiVersionOne extends DataOneApi {
   // The headers to set for the HTTP response.
   protected $headers = array();
 
-    /**
+  /**
    * Get a representation for a given PID.
    *
    * This function provides the implementer an opportunity to load data related
@@ -145,14 +84,27 @@ class DataOneApiVersionOne extends DataOneApi {
    * @param string $pid
    *   The PID from the request.
    *
+   * @param string $api_function
+   *   The DataONE API function being called by this request.
+   *
    * @param mixed
    *   Either DATAONE_API_LOADER_FAILED or a representation of a loaded PID.
    */
-  static public function loadPid($pid) {
+  static public function loadPid($pid, $api_function = '') {
     global $base_url;
-    watchdog('dataone', 'call to loadPid() should be made by an implementing class', array(), WATCHDOG_NOTICE);
+    watchdog('dataone', 'call to loadPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
     // If the $pid cannot be loaded or found, return DATAONE_API_LOADER_FAILED
     // for DataOneApiVersionOne::validPid().
+
+    // Handle loading of PID data differently for the called function.
+    switch($api_function) {
+      case 'MNRead.get() & MNRead.describe()':
+      case 'MNRead.getSystemMetadata()':
+      case 'MNRead.getChecksum()':
+      case 'MNRead.getReplica()':
+      case '':
+      default:
+    }
 
     $subjects = _dataone_get_member_node_subjects(TRUE);
 
@@ -278,7 +230,6 @@ class DataOneApiVersionOne extends DataOneApi {
    *   Either the string PID or FALSE
    */
   static public function getPid($pid_data) {
-    watchdog('dataone', 'call to getPidForObject() should be made by an implementing class', array(), WATCHDOG_NOTICE);
     return $pid_data['identifier'];
   }
 
@@ -508,7 +459,6 @@ class DataOneApiVersionOne extends DataOneApi {
    *   Either FALSE or a structure like a node or entity or array.
    */
   public function getObjectForStreaming($pid_data) {
-    watchdog('dataone', 'call to getObjectForStreaming() should be made by an implementing class', array(), WATCHDOG_NOTICE);
     return !empty($pid_data['stream_uri']) ? $pid_data['stream_uri'] : FALSE;
   }
 
@@ -917,6 +867,7 @@ class DataOneApiVersionOne extends DataOneApi {
     if (!empty($pid_data['type'])) {
       return $pid_data['type'];
     }
+
     watchdog('dataone', 'call to getTypeForPid() should be made by an implementing class', array(), WATCHDOG_ERROR);
     return FALSE;
   }
@@ -3177,7 +3128,7 @@ class DataOneApiVersionOne extends DataOneApi {
       ),
       'MNRead.get() & MNRead.describe()' => array(
         'paths' => array('/object/%dataone'),
-        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid', '/object/'),
+        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid', '/object/', 'MNRead.get() & MNRead.describe()'),
         'method' => array(
           'GET' => 'MNRead.get()',
           'HEAD' => 'MNRead.describe()',
@@ -3189,7 +3140,7 @@ class DataOneApiVersionOne extends DataOneApi {
       ),
       'MNRead.getSystemMetadata()' => array(
         'paths' => array('/meta/%dataone'),
-        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid', '/meta/'),
+        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid', '/meta/', 'MNRead.getSystemMetadata()'),
         'method' => array('GET' => 'MNRead.getSystemMetadata()'),
         'access callback' => 'dataone_api_access',
         'access arguments' => array(DATAONE_API_VERSION_1, 1),
@@ -3198,7 +3149,7 @@ class DataOneApiVersionOne extends DataOneApi {
       ),
       'MNRead.getChecksum()' => array(
         'paths' => array('/checksum/%dataone'),
-        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid', '/checksum/'),
+        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid', '/checksum/', 'MNRead.getChecksum()'),
         'method' => array('GET' => 'MNRead.getChecksum()'),
         'access callback' => 'dataone_api_access',
         'access arguments' => array(DATAONE_API_VERSION_1, 1),
@@ -3264,7 +3215,7 @@ class DataOneApiVersionOne extends DataOneApi {
       ),
       'MNRead.getReplica()' => array(
         'paths' => array('/replica/%dataone'),
-        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid', '/replica/'),
+        'load arguments' => array(DATAONE_API_VERSION_1, 'loadPid', '/replica/', 'MNRead.getReplica()'),
         'method' => array('GET' => 'MNRead.getReplica()'),
         'access callback' => 'dataone_api_access',
         'access arguments' => array(DATAONE_API_VERSION_1),
