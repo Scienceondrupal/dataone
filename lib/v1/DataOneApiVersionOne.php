@@ -995,8 +995,8 @@ class DataOneApiVersionOne extends DataOneApi {
       $to_date = !empty($parameters['toDate']) ? $parameters['toDate'] : FALSE;
       $event = !empty($parameters['event']) ? $parameters['event'] : FALSE;
       $pid_filter = !empty($parameters['pidFilter']) ? $parameters['pidFilter'] : FALSE;
-      $start = !empty($parameters['start']) ? intval($parameters['start']) : FALSE;
-      $max_count = !empty($parameters['count']) ? intval($parameters['count']) : FALSE;
+      $start = array_key_exists('start', $parameters) ? intval($parameters['start']) : FALSE;
+      $max_count = array_key_exists('count', $parameters) ? intval($parameters['count']) : FALSE;
 
       // Make us reif both fromDate and toDate exist that fromDate is less than.
       if (($from_date && $to_date) && $from_date > $to_date){
@@ -2216,7 +2216,7 @@ class DataOneApiVersionOne extends DataOneApi {
         DataOneApiVersionOne::throwInvalidRequest($invalid_request_code, 'Required parameter "$query_param" is missing.');
       }
       // Set any default values for missing parameters.
-      if ($missing_param && isset($parameter_info['default_value'])) {
+      if ($missing_param && array_key_exists('default_value', $parameter_info)) {
         $parameters[$query_param] = $parameter_info['default_value'];
       }
     }
