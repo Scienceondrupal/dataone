@@ -2472,7 +2472,7 @@ class DataOneApiVersionOne extends DataOneApi {
         '_attrs' => array('algorithm' => $checksum_algorithm),
         '_text' => $checksum,
       ),
-      'dateSysMetadataModified' => format_date($metadata_modified_date, 'custom', 'Y-m-d\TH:i:s'),
+      'dateSysMetadataModified' => format_date($metadata_modified_date, 'custom', 'Y-m-d\TH:i:s.uP'),
       'size' => $size,
     );
   }
