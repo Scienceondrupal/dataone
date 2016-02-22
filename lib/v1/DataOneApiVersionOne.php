@@ -1440,7 +1440,7 @@ class DataOneApiVersionOne extends DataOneApi {
       // Last Modified.
       $last_modified = $this->getLastModifiedDateForPid($pid_data);
       if ($last_modified) {
-        $elements['d1:systemMetadata']['dateSysMetadataModified'] = format_date($last_modified, 'custom', DATAONE_API_DATE_FORMAT);
+        $elements['d1:systemMetadata']['dateSysMetadataModified'] = format_date($last_modified, 'custom', DATAONE_API_DATE_FORMAT_SYS_METADATA_MODIFIED);
       }
 
       $origin = $this->getOriginMemberNode($pid_data);
@@ -2472,7 +2472,7 @@ class DataOneApiVersionOne extends DataOneApi {
         '_attrs' => array('algorithm' => $checksum_algorithm),
         '_text' => $checksum,
       ),
-      'dateSysMetadataModified' => format_date($metadata_modified_date, 'custom', 'Y-m-d\TH:i:s.uP'),
+      'dateSysMetadataModified' => format_date($metadata_modified_date, 'custom', DATAONE_API_DATE_FORMAT_SYS_METADATA_MODIFIED),
       'size' => $size,
     );
   }

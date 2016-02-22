@@ -2,7 +2,28 @@
 
 /**
  * @file
- * DataOneApiVersionOne.php
+ * DataOneApiVersionTwo.php
+ *
+ * NOTES
+ *
+ * Check error codes
+ *
+ * MNCore.getLogRecords
+ *  - Log entries will only return PIDs.
+ *  - param idFilter (Accepts PIDs and SIDs)
+ *
+ * MNRead.get
+ *  - Supports both PIDs and SIDs. SID will return HEAD PID.
+ *  - If the object does not exist on the node servicing the request, then Exceptions.NotFound must be raised even if the object exists on another node in the DataONE system.
+ *
+ * MNRead.geSystemMetadata
+ *  - If the object does not exist on the node servicing the request, then Exceptions.NotFound MUST be raised even if the object exists on another node in the DataONE system.
+ *
+ * new method: MNRead.systemMetadataChanged()
+ * http://jenkins-1.dataone.org/documentation/unstable/API-Documentation-development/apis/MN_APIs.html#MNRead.systemMetadataChanged
+ *
+ *
+ *
  */
 
 class DataOneApiVersionTwo extends DataOneApi {

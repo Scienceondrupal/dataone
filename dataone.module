@@ -41,6 +41,7 @@ define('DATAONE_API_STATUS_PRODUCTION', 'production');
 define('DATAONE_API_STATUS_DEVELOPMENT', 'development');
 define('DATAONE_API_STATUS_OFF', 'off');
 define('DATAONE_API_DATE_FORMAT', 'D, d M Y H:i:s T');
+define('DATAONE_API_DATE_FORMAT_SYS_METADATA_MODIFIED', 'Y-m-d\TH:i:s.uP');
 define('DATAONE_API_LOADER_FAILED', 'dataone_PID_load_fail');
 
 /**
