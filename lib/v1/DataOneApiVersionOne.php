@@ -485,7 +485,7 @@ class DataOneApiVersionOne extends DataOneApi {
     $describe_headers = array();
     // The Last Modified date.
     $timestamp = $this->getLastModifiedDateForPid($pid_data);
-    $describe_headers['Last-Modified'] = format_date($timestamp, 'custom', DATAONE_API_DATE_FORMAT);
+    $describe_headers['Last-Modified'] = gmdate(DATAONE_API_DATE_FORMAT_DESCRIBE_HEADER_LAST_MODIFIED, $timestamp);
     // The size, in bytes.
     $describe_headers['Content-Length'] =  $this->getByteSizeForPid($pid_data);
     // The format ID.
@@ -789,7 +789,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   @see DataOneApiVersionOne::getDataOneBooleans()
    */
   public function getArchiveStatusForPid($pid_data) {
-    return !empty($pid_date['archive_status']) ? $pid_data['archive_status'] : FALSE;
+    return !empty($pid_data['archive_status']) ? $pid_data['archive_status'] : FALSE;
   }
 
   /**
@@ -803,7 +803,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   Either the timestamp to be passed to format_date() or FALSE
    */
   public function getDateUploadedForPid($pid_data) {
-    if (!empty($pid_date['date_uploaded'])) {
+    if (!empty($pid_data['date_uploaded'])) {
       return $pid_data['date_uploaded'];
     }
 
@@ -1435,12 +1435,12 @@ class DataOneApiVersionOne extends DataOneApi {
       // Date uploaded.
       $date_uploaded = $this->getDateUploadedForPid($pid_data);
       if ($date_uploaded) {
-        $elements['d1:systemMetadata']['dateUploaded'] = format_date($date_uploaded, 'custom', DATAONE_API_DATE_FORMAT);
+        $elements['d1:systemMetadata']['dateUploaded'] = gmdate(DATAONE_API_DATE_FORMAT_SYS_METADATA_MODIFIED, $date_uploaded);
       }
       // Last Modified.
       $last_modified = $this->getLastModifiedDateForPid($pid_data);
       if ($last_modified) {
-        $elements['d1:systemMetadata']['dateSysMetadataModified'] = format_date($last_modified, 'custom', DATAONE_API_DATE_FORMAT_SYS_METADATA_MODIFIED);
+        $elements['d1:systemMetadata']['dateSysMetadataModified'] = gmdate(DATAONE_API_DATE_FORMAT_SYS_METADATA_MODIFIED, $last_modified);
       }
 
       $origin = $this->getOriginMemberNode($pid_data);
@@ -2420,7 +2420,7 @@ class DataOneApiVersionOne extends DataOneApi {
       'userAgent' => $user_agent,
       'subject' => $subject,
       'event' => $event,
-      'dateLogged' => format_date($date_logged, 'custom', DATAONE_API_DATE_FORMAT),
+      'dateLogged' => gmdate(DATAONE_API_DATE_FORMAT_SYS_METADATA_MODIFIED, $date_logged),
       'nodeIdentifier' => _dataone_get_member_node_identifier(TRUE),
     );
 
@@ -2472,7 +2472,7 @@ class DataOneApiVersionOne extends DataOneApi {
         '_attrs' => array('algorithm' => $checksum_algorithm),
         '_text' => $checksum,
       ),
-      'dateSysMetadataModified' => format_date($metadata_modified_date, 'custom', DATAONE_API_DATE_FORMAT_SYS_METADATA_MODIFIED),
+      'dateSysMetadataModified' => gmdate(DATAONE_API_DATE_FORMAT_SYS_METADATA_MODIFIED, $metadata_modified_date),
       'size' => $size,
     );
   }
