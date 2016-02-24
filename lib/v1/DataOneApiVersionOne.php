@@ -2683,57 +2683,44 @@ class DataOneApiVersionOne extends DataOneApi {
     // Define the URIs.
     $resource_map_pid = $pid_data['identifier'];
     $metadata_uri = $dataone_resolver_uri . $pid_data['metadata']['identifier'];
-    $data_uri = $dataone_resolver_uri . $pid_data['data']['identifier'];
     $resource_map_pid_uri = $dataone_resolver_uri . $resource_map_pid;
     $aggregation_id = $resource_map_pid_uri . '#aggregation';
 
     // The resource map.
-    $resource_map['rdf:RDF']['_resource_map'] = array(
-      '_attrs' => array(
-        'rdf:about' => 'http://www.openarchives.org/ore/terms/ResourceMap',
-      ),
-      'rdfs:isDefinedBy' => array(
-        '_attrs' => array('rdf:resource' => 'http://www.openarchives.org/ore/terms/'),
-        'rdfs:label' => 'ResourceMap',
-      ),
-    );
     $resource_map['rdf:RDF']['_resource_map_id'] = array(
       '_attrs' => array(
         'rdf:about' => $resource_map_pid_uri,
       ),
       'rdf:type' => array(
-        '_attrs' => array('rdf:resource' => 'http://www.openarchives.org/ore/terms/ResourceMap'),
+        '_attrs' => array(
+          'rdf:resource' => 'http://www.openarchives.org/ore/terms/ResourceMap',
+        ),
       ),
-      'dcterms:identifier' => $resource_map_pid,
-      'dc:format' => 'application/rdf+xml',
       'ore:describes' => array(
         '_attrs' => array('rdf:resource' => $aggregation_id),
       ),
+      'dcterms:identifier' => array(
+        '_attrs' => array(
+          'rdf:datatype' => 'http://www.w3.org/2001/XMLSchema#string',
+        ),
+        '_text' => $resource_map_pid,
+      ),
     );
-
     // The aggregation.
     $resource_map['rdf:RDF']['_resource_map_aggregation'] = array(
-      '_attrs' => array(
-        'rdf:about' => 'http://www.openarchives.org/ore/terms/Aggregation',
+      '_keys' => array(
+        'ore:aggregates' => '_aggregates_',
       ),
-      'rdfs:isDefinedBy' => array(
-        '_attrs' => array('rdf:resource' => 'http://www.openarchives.org/ore/terms/'),
-        'rdfs:label' => 'Aggregation',
-      ),
-    );
-    $resource_map['rdf:RDF']['_resource_map_aggregation_id'] = array(
-      '_keys' => array('ore:aggregates' => '_aggregates_'),
       '_attrs' => array(
         'rdf:about' => $aggregation_id,
       ),
       'rdf:type' => array(
-        '_attrs' => array('rdf:resource' => 'http://www.openarchives.org/ore/terms/Aggregation'),
+        '_attrs' => array(
+          'rdf:resource' => 'http://www.openarchives.org/ore/terms/Aggregation',
+        ),
       ),
       'ore:isDescribedBy' => array(
-        '_attrs' => array('rdf:resource' => $resource_map_pid),
-      ),
-      '_aggregates_data' => array(
-        '_attrs' => array('rdf:resource' => $data_uri),
+        '_attrs' => array('rdf:resource' => $resource_map_pid_uri),
       ),
       '_aggregates_metadata' => array(
         '_attrs' => array('rdf:resource' => $metadata_uri),
@@ -2742,27 +2729,45 @@ class DataOneApiVersionOne extends DataOneApi {
 
     // The metadata.
     $resource_map['rdf:RDF']['_resource_metadata_id'] = array(
+      '_keys' => array(
+        'cito:documents' => '_documents_',
+      ),
       '_attrs' => array(
         'rdf:about' => $metadata_uri,
       ),
-      'cito:documents' => array('_attrs' => array('rdf:resource' => $data_uri)),
+      'ore:isAggregatedBy' => $aggregation_id,
       'dcterms:identifier' => $pid_data['metadata']['identifier'],
     );
     if (!empty($pid_data['metadata']['description'])) {
       $resource_map['rdf:RDF']['_resource_metadata_id']['dcterms:description'] = DataOneApiXml::prepareXMLString($pid_data['metadata']['description']);
     }
 
-    // The data.
-    $resource_map['rdf:RDF']['_resource_data_id'] = array(
-      '_attrs' => array(
-        'rdf:about' => $data_uri,
-      ),
-      'cito:isDocumentedBy' => array('_attrs' => array('rdf:resource' => $data_uri)),
-      'dcterms:identifier' => $pid_data['data']['identifier'],
-    );
-    if (!empty($pid_data['data']['description'])) {
-      $resource_map['rdf:RDF']['_resource_data_id']['dcterms:description'] = DataOneApiXml::prepareXMLString($pid_data['data']['description']);
+    foreach($pid_data['data'] as $idx => $data_file) {
+      $data_uri = $dataone_resolver_uri . $data_file['identifier'];
+      $data_description = $data_file['description'];
+      // Data file.
+      $resource_map['rdf:RDF']['_resource_data_id_' . $idx] = array(
+        '_attrs' => array(
+          'rdf:about' => $data_uri,
+        ),
+        'cito:isDocumentedBy' => array('_attrs' => array('rdf:resource' => $metadata_uri)),
+        'ore:isAggregatedBy' => $aggregation_id,
+        'dcterms:identifier' => $data_file['identifier'],
+      );
+      // Add data descriptor if found.
+      if (!empty($pid_data['data']['description'])) {
+        $resource_map['rdf:RDF']['_resource_data_id' . $idx]['dcterms:description'] = DataOneApiXml::prepareXMLString($data_file['description']);
+      }
+      // Add link to aggregation.
+      $resource_map['rdf:RDF']['_resource_map_aggregation']['_aggregates_data' . $idx] = array(
+        '_attrs' => array('rdf:resource' => $data_uri),
+      );
+      // Add link to metadata.
+      $resource_map['rdf:RDF']['_resource_metadata_id']['_documents_data' . $idx] = array(
+        '_attrs' => array('rdf:resource' => $data_uri),
+      );
     }
+
 
     return DataOneApiVersionOne::getXml($resource_map);
   }
