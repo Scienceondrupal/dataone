@@ -2735,7 +2735,9 @@ class DataOneApiVersionOne extends DataOneApi {
       '_attrs' => array(
         'rdf:about' => $metadata_uri,
       ),
-      'ore:isAggregatedBy' => $aggregation_id,
+      'ore:isAggregatedBy' => array(
+        '_attrs' => array('rdf:resource' => $aggregation_id),
+      ),
       'dcterms:identifier' => $pid_data['metadata']['identifier'],
     );
     if (!empty($pid_data['metadata']['description'])) {
@@ -2751,7 +2753,9 @@ class DataOneApiVersionOne extends DataOneApi {
           'rdf:about' => $data_uri,
         ),
         'cito:isDocumentedBy' => array('_attrs' => array('rdf:resource' => $metadata_uri)),
-        'ore:isAggregatedBy' => $aggregation_id,
+        'ore:isAggregatedBy' => array(
+          '_attrs' => array('rdf:resource' => $aggregation_id),
+        ),
         'dcterms:identifier' => $data_file['identifier'],
       );
       // Add data descriptor if found.
