@@ -1116,7 +1116,7 @@ class DataOneApiVersionOne extends DataOneApi {
           'identifier' => _dataone_get_member_node_identifier(TRUE),
           'name' => _dataone_get_member_node_name(),
           'description' => _dataone_get_member_node_description(),
-          'baseURL' => _dataone_get_member_node_endpoint(DATAONE_API_VERSION_1, TRUE),
+          'baseURL' => $this->getBaseURL(DATAONE_API_VERSION_1),
           'services' => array(
             '_keys' => array('service' => '_service'),
             '_service0' => array(

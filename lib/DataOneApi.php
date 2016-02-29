@@ -30,6 +30,24 @@ abstract class DataOneApi {
   }
 
   /**
+   * Get the endpoint base URL of this Member Node.
+   *
+   * @param string $version
+   *   The version of the DataONE API
+   *
+   * @return string
+   *   The Member Node base URL
+   */
+  static public function getBaseURL($version) {
+    $url = _dataone_get_member_node_endpoint($version, TRUE);
+    // Strip off the version.
+    $end = '/' . $version;
+    $pos = strpos($url, $end);
+    // What's left is the baseURL.
+    return substr($url, 0, $pos);
+  }
+
+  /**
    * Get information about the API paths.
    *
    * @return array
