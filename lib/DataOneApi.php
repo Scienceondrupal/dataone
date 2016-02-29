@@ -39,7 +39,7 @@ abstract class DataOneApi {
    *   The Member Node base URL
    */
   static public function getBaseURL($version) {
-    $url = _dataone_get_member_node_endpoint($version, TRUE);
+    $url = dataone_get_member_node_endpoint($version, TRUE);
     // Strip off the version.
     $end = '/' . $version;
     $pos = strpos($url, $end);

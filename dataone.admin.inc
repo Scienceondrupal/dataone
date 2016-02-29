@@ -46,6 +46,15 @@ function dataone_admin_settings($form, &$form_state) {
     '#default_value' => _dataone_get_member_node_name(),
     '#weight' => 2,
   );
+  $form['main'][DATAONE_VARIABLE_API_ENDPOINT] = array(
+    '#type' => 'textfield',
+    '#title' => t('API Endpoint Path'),
+    '#description' => t('The relative path you want to use as the Member Node endpoint. NOTE: Omit the version identifier. For example, if \'d1/mn/v1\' is the desired version 1 path, the base URL should be \'d1/mn\''),
+    '#default_value' => _dataone_get_member_node_endpoint(),
+    '#field_prefix' => _dataone_get_base_url(),
+    '#size' => 30,
+    '#weight' => 2,
+  );
   $form['main'][DATAONE_VARIABLE_API_DESCRIPTION] = array(
     '#type' => 'textfield',
     '#title' => t('Member Node Name'),
@@ -137,17 +146,6 @@ function _dataone_build_api_version_form_fields(&$form_element, $weight = 10){
       '#options' => _dataone_admin_online_options(),
       '#default_value' => _dataone_get_variable($version_id, DATAONE_VARIABLE_API_STATUS, DATAONE_API_STATUS_DEVELOPMENT),
       '#weight' => 1,
-    );
-
-    $endpoint = _dataone_get_variable_name($version_id, DATAONE_VARIABLE_API_ENDPOINT);
-    $form_element[$version_id][$endpoint] = array(
-      '#type' => 'textfield',
-      '#title' => t('API Endpoint Path'),
-      '#description' => t('The relative path you want to use as the Member Node endpoint.'),
-      '#default_value' => _dataone_get_variable($version_id, DATAONE_VARIABLE_API_ENDPOINT, 'd1/mn/' . $version_id),
-      '#field_prefix' => _dataone_get_base_url(),
-      '#size' => 30,
-      '#weight' => 2,
     );
 
     $replicated = _dataone_get_variable_name($version_id, DATAONE_VARIABLE_API_REPLICATE);

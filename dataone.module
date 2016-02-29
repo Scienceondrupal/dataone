@@ -134,7 +134,7 @@ function dataone_menu() {
     }
 
     // The API endpoint path for this version.
-    $endpoint = _dataone_get_member_node_endpoint($version_id);
+    $endpoint = dataone_get_member_node_endpoint($version_id);
     // Figure out how many parts are in the endpoint path.
     // This info will be used for defining where page arguments are located.
     $endpoint_parts = count(explode('/', $endpoint));
@@ -343,7 +343,7 @@ function _dataone_get_member_node_identifier($full_identifier = FALSE) {
 }
 
 /**
- * Get the endpoint URL of this Member Node.
+ * Get the versioned endpoint URL of this Member Node.
  *
  * @param string $version
  *   The version of the DataONE API
@@ -354,8 +354,21 @@ function _dataone_get_member_node_identifier($full_identifier = FALSE) {
  * @return string
  *   The Member Node identifier
  */
-function _dataone_get_member_node_endpoint($version, $full_url = FALSE) {
-  $endpoint = _dataone_get_variable($version, DATAONE_VARIABLE_API_ENDPOINT);
+function dataone_get_member_node_endpoint($version, $full_url = FALSE) {
+  return _dataone_get_member_node_endpoint($full_url) . '/' . $version;
+}
+
+/**
+ * Get the endpoint URL of this Member Node.
+ *
+ * @param BOOL $full_url
+ *   Whether to get the full URL or just the changeable endpoint
+ *
+ * @return string
+ *   The Member Node identifier
+ */
+function _dataone_get_member_node_endpoint($full_url = FALSE) {
+  $endpoint = variable_get(DATAONE_VARIABLE_API_ENDPOINT, 'd1/mn');
   return $full_url ? _dataone_get_base_url() . $endpoint : $endpoint;
 }
 
