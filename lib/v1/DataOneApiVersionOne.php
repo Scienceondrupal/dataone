@@ -813,6 +813,7 @@ class DataOneApiVersionOne extends DataOneApi {
 
   /**
    * Get the Node reference identifier for the orignal DataONE Member Node.
+   * Assumes this site is the origin member node unless overriden in $pid_data.
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.NodeReference
    *
    * @param mixed $pid_data
@@ -822,15 +823,13 @@ class DataOneApiVersionOne extends DataOneApi {
    *   Either the reference identifier or FALSE
    */
   public function getOriginMemberNode($pid_data) {
-    if (!empty($pid_data['origin_member_node'])) {
-      return $pid_data['origin_member_node'];
-    }
-    watchdog('dataone', 'call to getOriginMemberNode() should be made by an implementing class', array(), WATCHDOG_ERROR);
-    return FALSE;
+    return !empty($pid_data['origin_member_node']) ? $pid_data['origin_member_node'] : _dataone_get_member_node_identifier(TRUE);
   }
 
   /**
    * The Node reference identifier for the authoritative DataONE Member Node.
+   * Assumes this site is the authoritative member node unless overriden in
+   * $pid_data.
    * @see https://releases.dataone.org/online/api-documentation-v1.2.0/apis/Types.html#Types.NodeReference
    *
    * @param mixed $pid_data
@@ -840,8 +839,7 @@ class DataOneApiVersionOne extends DataOneApi {
    *   Either the reference identifier or FALSE
    */
   public function getAuthoritativeMemberNode($pid_data) {
-    return !empty($pid_data['authoritative_member_node']) ? $pid_data['authoritative_member_node'] : FALSE;
-  }
+    return !empty($pid_data['authoritative_member_node']) ? $pid_data['authoritative_member_node'] : _dataone_get_member_node_identifier(TRUE);  }
 
   /**
    * Handle a synchronizationFailed() call from a Coordinating Node (CN).
