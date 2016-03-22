@@ -16,6 +16,7 @@
  *
  * validPid()
  * getSession()
+ * checkSession()
  *
  * === NOTES ===
  *
@@ -2629,8 +2630,7 @@ class DataOneApiVersionOne extends DataOneApi {
    */
   static public function getUtcTimestamp($date_string) {
     try {
-      $date = new DateTime($date_string);
-      $date->setTimeZone(new DateTimeZone('UTC'));
+      $date = new DateTime($date_string, new DateTimeZone('UTC'));
       return $date->getTimestamp();
     }
     catch(Exception $e) {
