@@ -2756,8 +2756,6 @@ class DataOneApiVersionOne extends DataOneApi {
 
     foreach($data['data'] as $idx => $data_file) {
       $data_uri = $dataone_resolver_uri . $data_file['identifier'];
-      $data_description = $data_file['description'];
-      // Data file.
       $resource_map['rdf:RDF']['_resource_data_id_' . $idx] = array(
         '_attrs' => array(
           'rdf:about' => $data_uri,
@@ -2769,8 +2767,8 @@ class DataOneApiVersionOne extends DataOneApi {
         'dcterms:identifier' => $data_file['identifier'],
       );
       // Add data descriptor if found.
-      if (!empty($data_description)) {
-        $resource_map['rdf:RDF']['_resource_data_id' . $idx]['dcterms:description'] = DataOneApiXml::prepareXMLString($data_description);
+      if (!empty($data_file['description'])) {
+        $resource_map['rdf:RDF']['_resource_data_id' . $idx]['dcterms:description'] = DataOneApiXml::prepareXMLString($data_file['description']);
       }
       // Add link to aggregation.
       $resource_map['rdf:RDF']['_resource_map_aggregation']['_aggregates_data' . $idx] = array(
