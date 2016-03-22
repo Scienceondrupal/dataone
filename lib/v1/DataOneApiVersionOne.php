@@ -2641,8 +2641,20 @@ class DataOneApiVersionOne extends DataOneApi {
   /**
    * Generate a Resource Map.
    *
-   * @param array $pid_data
-   *   The resource map PID
+   * @param array $data
+   *   The resource map information
+   *     'identifier' => The PID for this RESOURCE MAP object (required)
+   *     'metadata' => array(
+   *       'identifier' => The PID for the METADATA object (required)
+   *       'description' => A description of the METADATA object (optional)
+   *     ),
+   *     'data' => array( // a mult-valued array of DATA objects (required)
+   *       0 => array(
+   *         'identifier' => The PID for the DATA object (required)
+   *         'description' => A description of the DATA object (optional)
+   *       ),
+   *       1...n
+   *     ),
    *
    * @param array $metadata
    *   An array with keys
@@ -2657,7 +2669,7 @@ class DataOneApiVersionOne extends DataOneApi {
    * @return string
    *   The resource map as RDF/XML
    */
-  static public function getResourceMap($pid_data) {
+  static public function getResourceMap($data) {
 
     // The required base URI of the resolvable URIs for metadata, data, the
     // resource map and its aggregation.
@@ -2679,8 +2691,8 @@ class DataOneApiVersionOne extends DataOneApi {
     }
 
     // Define the URIs.
-    $resource_map_pid = $pid_data['identifier'];
-    $metadata_uri = $dataone_resolver_uri . $pid_data['metadata']['identifier'];
+    $resource_map_pid = $data['identifier'];
+    $metadata_uri = $dataone_resolver_uri . $data['metadata']['identifier'];
     $resource_map_pid_uri = $dataone_resolver_uri . $resource_map_pid;
     $aggregation_id = $resource_map_pid_uri . '#aggregation';
 
@@ -2736,13 +2748,13 @@ class DataOneApiVersionOne extends DataOneApi {
       'ore:isAggregatedBy' => array(
         '_attrs' => array('rdf:resource' => $aggregation_id),
       ),
-      'dcterms:identifier' => $pid_data['metadata']['identifier'],
+      'dcterms:identifier' => $data['metadata']['identifier'],
     );
-    if (!empty($pid_data['metadata']['description'])) {
+    if (!empty($data['metadata']['description'])) {
       $resource_map['rdf:RDF']['_resource_metadata_id']['dcterms:description'] = DataOneApiXml::prepareXMLString($pid_data['metadata']['description']);
     }
 
-    foreach($pid_data['data'] as $idx => $data_file) {
+    foreach($data['data'] as $idx => $data_file) {
       $data_uri = $dataone_resolver_uri . $data_file['identifier'];
       $data_description = $data_file['description'];
       // Data file.
@@ -2757,8 +2769,8 @@ class DataOneApiVersionOne extends DataOneApi {
         'dcterms:identifier' => $data_file['identifier'],
       );
       // Add data descriptor if found.
-      if (!empty($pid_data['data']['description'])) {
-        $resource_map['rdf:RDF']['_resource_data_id' . $idx]['dcterms:description'] = DataOneApiXml::prepareXMLString($data_file['description']);
+      if (!empty($data_description)) {
+        $resource_map['rdf:RDF']['_resource_data_id' . $idx]['dcterms:description'] = DataOneApiXml::prepareXMLString($data_description);
       }
       // Add link to aggregation.
       $resource_map['rdf:RDF']['_resource_map_aggregation']['_aggregates_data' . $idx] = array(
