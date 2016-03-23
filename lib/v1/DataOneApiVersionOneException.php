@@ -241,10 +241,16 @@ class DataOneApiVersionOneException extends DataOneApiException {
       $description = $descriptions->length > 0 ? $descriptions->item(0)->nodeValue : '';
       $trace_infos = $error->getElementsByTagName("traceInformation");
       $trace_info = $trace_infos->length > 0 ? $trace_infos->item(0)->nodeValue : array();
-      $pids = $error->getElementsByTagName("pid");
-      $pid = $pids->length > 0 ? $pids->item(0)->nodeValue : '';
-      $node_ids = $error->getElementsByTagName("nodeId");
-      $node_id = $node_ids->length > 0 ? $node_ids->item(0)->nodeValue : '';
+      $pid = $error->getAttribute("pid");
+      if (empty($pid)) {
+        $pids = $error->getElementsByTagName("pid");
+        $pid = $pids->length > 0 ? $pids->item(0)->nodeValue : '';
+      }
+      $node_id = $error->getAttribute("nodeId");
+      if (empty($node_id)) {
+        $node_ids = $error->getElementsByTagName("nodeId");
+        $node_id = $node_ids->length > 0 ? $node_ids->item(0)->nodeValue : '';
+      }
       return new DataOneApiVersionOneException($name, $error_code, $detail_code, $description, $trace_info = array(), $pid, $node_id);
     }
   }

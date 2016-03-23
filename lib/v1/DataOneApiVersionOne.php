@@ -2500,7 +2500,7 @@ class DataOneApiVersionOne extends DataOneApi {
         DataOneApiVersionOne::throwServiceFailure(2161, 'Could not read the XML exception file due to Member Node issues.');
       }
 
-      // Announce the replication event.
+      // Announce the synchronization_failed event.
       module_invoke_all('dataone_event', 'synchronization_failed', $exc->getPid());
 
       // Allow extending classes an easier way to handle the exception.
