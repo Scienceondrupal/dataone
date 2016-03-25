@@ -66,6 +66,7 @@ define('DATAONE_API_LOADER_FAILED', 'dataone_PID_load_fail');
  *   Whatever is relevant to the loader
  */
 function dataone_load($path_argument, $version_id, $loader_function, $api_path, $api_function) {
+
   $pid = urldecode($path_argument);
 
   // Handle $path_arguments that should contain '/'.
@@ -218,10 +219,12 @@ function _dataone_api_versions() {
         'name' => t('Version 1'),
         'class' => 'DataOneApiVersionOne',
       ),
+      /*
       DATAONE_API_VERSION_2 => array(
         'name' => t('Version 2'),
         'class' => 'DataOneApiVersionTwo',
       ),
+      */
     );
 
     // Allow implementing modules to define their API class implementations.
