@@ -1,0 +1,426 @@
+<?php
+
+/**
+ * @file
+ * dataone.module
+ */
+
+define('DATAONE_PERMISSION_ADMINISTER_CONFIG', 'administer dataone configuration');
+define('DATAONE_VARIABLE_MEMBER_NODE_IDENTIFIER', 'dataone_mn_identifier');
+define('DATAONE_VARIABLE_API_NAME', 'dataone_mn_api_name');
+define('DATAONE_VARIABLE_API_DESCRIPTION', 'dataone_mn_api_desc');
+define('DATAONE_VARIABLE_API_VERSIONS', 'dataone_mn_api_versions');
+define('DATAONE_VARIABLE_API_SUBJECTS', 'dataone_mn_api_subjects');
+define('DATAONE_API_CONTACT_SUBJECT', 'dataone_mn_api_contact_subject');
+define('DATAONE_VARIABLE_API_STATUS', 'dataone_mn_api_online_');
+define('DATAONE_VARIABLE_API_ENDPOINT', 'dataone_mn_api_endpoint_paths_');
+define('DATAONE_VARIABLE_API_REPLICATE', 'dataone_mn_api_replicate_');
+define('DATAONE_VARIABLE_API_SYNCHRONIZE', 'dataone_mn_api_synchronize_');
+define('DATAONE_VARIABLE_API_SYNC_HOUR', 'dataone_mn_api_sync_hour_');
+define('DATAONE_VARIABLE_API_SYNC_MDAY', 'dataone_mn_api_sync_mday_');
+define('DATAONE_VARIABLE_API_SYNC_MIN', 'dataone_mn_api_sync_min_');
+define('DATAONE_VARIABLE_API_SYNC_MON', 'dataone_mn_api_sync_mon_');
+define('DATAONE_VARIABLE_API_SYNC_SEC', 'dataone_mn_api_sync_sec_');
+define('DATAONE_VARIABLE_API_SYNC_WDAY', 'dataone_mn_api_sync_wday_');
+define('DATAONE_VARIABLE_API_SYNC_YEAR', 'dataone_mn_api_sync_year_');
+define('DATAONE_VARIABLE_API_MAX_LOG_COUNT', 'dataone_mn_api_log_count_');
+define('DATAONE_VARIABLE_API_MAX_OBJECT_COUNT', 'dataone_mn_api_object_count_');
+define('DATAONE_VARIABLE_API_SYNC_FAILED_DIR', 'dataone_mn_api_sync_failed_directory_');
+define('DATAONE_DEFAULT_MAX_LOG_RECORDS', '50');
+define('DATAONE_DEFAULT_MAX_OBJECT_RECORDS', '50');
+define('DATAONE_DEFAULT_CHECKSUM_ALGORITHM', 'MD5');
+define('DATAONE_CN_STAGING_ENDPOINT', '');
+define('DATAONE_CN_PRODUCTION_ENDPOINT', '');
+define('DATAONE_URL_CRON_EXPRESSION', 'https://en.wikipedia.org/wiki/Cron#CRON_expression');
+define('DATONE_URL_NODE_REGISTRATION', 'https://releases.dataone.org/online/api-documentation-v1.2.0/design/NodeIdentity.html#node-registration');
+define('DATAONE_API_VERSION_1', 'v1');
+define('DATAONE_API_VERSION_2', 'v2');
+define('DATAONE_API_TRUE_STRING', 'true');
+define('DATAONE_API_FALSE_STRING', 'false');
+define('DATAONE_API_STATUS_PRODUCTION', 'production');
+define('DATAONE_API_STATUS_DEVELOPMENT', 'development');
+define('DATAONE_API_STATUS_OFF', 'off');
+define('DATAONE_API_DATE_FORMAT_DESCRIBE_HEADER_LAST_MODIFIED', 'D, d M Y H:i:s T');
+define('DATAONE_API_DATE_FORMAT_SYS_METADATA_MODIFIED', 'Y-m-d\TH:i:s.u\Z');
+define('DATAONE_API_LOADER_FAILED', 'dataone_PID_load_fail');
+
+/**
+ * Generic path loader.
+ *
+ * @param string $path_argument
+ *   The part of the request path to pass to a loader function
+ *
+ * @param string $version_id
+ *   The version of the DataONE API
+ *
+ * @param string $loader_function
+ *   Loader function in the DataONE API class defined in _dataone_api_versions()
+ *
+ * @param string $api_path
+ *   The DataONE API path that was called
+ *
+ * @param string $api_function
+ *   For convenience of knowing what DataONE API method is being called.
+ *
+ * @return mixed
+ *   Whatever is relevant to the loader
+ */
+function dataone_load($path_argument, $version_id, $loader_function, $api_path, $api_function) {
+
+  $pid = urldecode($path_argument);
+
+  // Handle $path_arguments that should contain '/'.
+  // Get the requested path.
+  $request_path = $_GET['q'];
+
+  // Where the DataONE API path starts.
+  $api_path_pos = strrpos($request_path, $api_path);
+  if ($api_path_pos) {
+    $index = $api_path_pos + strlen($api_path);
+    $pid = substr($request_path, $index);
+  }
+
+  // Figure out which class to call.
+  $class = _dataone_api_version_class_name($version_id);
+  $payload = $class::$loader_function($pid, $api_function);
+  // If a wildcard loader function returns FALSE, it would be the equivalent of
+  // page not found. To handle this, we must pass something else so that the API
+  // can process the appropriate exception. In this case, pass the pid as
+  // 'identifier' and FALSE as 'valid'.
+
+  return $payload ? $payload : array('identifier' => $pid, 'valid' => FALSE);
+}
+
+/**
+ * Implements hook_menu().
+ */
+function dataone_menu() {
+  $items['admin/config/services/dataone'] = array(
+    'title' => 'DataONE Member Node',
+    'description' => 'Settings for configuring a DataONE Member Node',
+    'page callback' => 'system_admin_menu_block_page',
+    'access arguments' => array(DATAONE_PERMISSION_ADMINISTER_CONFIG),
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+  );
+  $items['admin/config/services/dataone/settings'] = array(
+    'title' => 'DataONE Settings',
+    'description' => 'Configure a DataONE Member Node.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('dataone_admin_settings'),
+    'access arguments' => array(DATAONE_PERMISSION_ADMINISTER_CONFIG),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'dataone.admin.inc',
+  );
+
+  // Publish version-specific menu paths.
+  $versions = _dataone_api_versions();
+  $implemented_versions = array_filter(array_values(variable_get(DATAONE_VARIABLE_API_VERSIONS, array())));
+
+  // Add menu paths for the APIs.
+  foreach ($implemented_versions as $version_id) {
+
+    // Get the Class implementation.
+    $class = _dataone_api_version_class_name($version_id);
+    if (!$class) {
+      drupal_set_message(t('Could not find implementation class for version: @ver', array('@ver' => $version_id)), 'error');
+      continue;
+    }
+
+    // Get the menu paths.
+    $paths = $class::getApiMenuPaths();
+    if (empty($paths)) {
+      drupal_set_message(t('No defined menu paths for version: @ver in @class', array('@ver' => $version_id, '@class' => $class)), 'error');
+      continue;
+    }
+
+    // The API endpoint path for this version.
+    $endpoint = dataone_get_member_node_endpoint($version_id);
+    // Figure out how many parts are in the endpoint path.
+    // This info will be used for defining where page arguments are located.
+    $endpoint_parts = count(explode('/', $endpoint));
+
+    // Iterate through the path definitions.
+    foreach ($paths as $title => $path_info) {
+      // Iterate through all the paths for a certain API method.
+      foreach ($path_info['paths'] as $path) {
+
+        // The Drupal menu path.
+        $api_path = $endpoint . $path;
+
+        // Add menu item.
+        $items[$api_path] = array(
+          'type' => MENU_CALLBACK,
+          // Setting 'title' => $title is important.
+          // It provides a key from menu_get_item() into getApiMenuPaths().
+          'title' => $title,
+          'page callback' => '_dataone_api_request',
+        );
+
+        // Page arguments.
+        // Arguments in the menu path.
+        $arguments = array($version_id);
+        if (!empty($path_info['arguments'])) {
+          foreach ($path_info['arguments'] as $relative_menu_path_index => $arg_info) {
+            // Add the count of endpoint path parts to the defined index.
+            $arguments[] = $endpoint_parts + $relative_menu_path_index;
+          }
+        }
+        $items[$api_path]['page arguments'] = $arguments;
+
+        if (!empty($path_info['load arguments'])) {
+          $items[$api_path]['load arguments'] = $path_info['load arguments'];
+        }
+
+        // Access control.
+        if (!empty($path_info['access callback'])) {
+          $items[$api_path]['access callback'] = $path_info['access callback'];
+        }
+        if (!empty($path_info['access arguments'])) {
+          $args = array();
+          foreach ($path_info['access arguments'] as $index => $arg) {
+            // Is the argument a positive integer represnting a menu path part?
+            // If so, add the count of endpoint path parts to the defined index.
+            $args[] = (is_numeric($arg) && 0 <= $arg) ? $endpoint_parts + $arg : $arg;
+          }
+          $items[$api_path]['access arguments'] = $args;
+        }
+      }
+    }
+  }
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function dataone_permission() {
+
+  return array(
+    DATAONE_PERMISSION_ADMINISTER_CONFIG => array(
+      'title' => t('Administer DataONE Configuration'),
+      'description' => t(''),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Get the possible Member Node API versions.
+ *
+ * @return array
+ *   Associative array of possible values for this Member Node's API versions.
+ */
+function _dataone_api_versions() {
+  $options = &drupal_static(__FUNCTION__);
+  if (empty($options)) {
+    $options = array(
+      DATAONE_API_VERSION_1 => array(
+        'name' => t('Version 1'),
+        'class' => 'DataOneApiVersionOne',
+      ),
+      /*
+      DATAONE_API_VERSION_2 => array(
+        'name' => t('Version 2'),
+        'class' => 'DataOneApiVersionTwo',
+      ),
+      */
+    );
+
+    // Allow implementing modules to define their API class implementations.
+    drupal_alter('dataone_api_versions', $options);
+  }
+
+  return $options;
+}
+
+/**
+ * Check access control.
+ *
+ * @param string $api_version
+ *   The version of the DataONE API
+ *
+ * @return BOOL
+ *   Either TRUE or FALSE
+ */
+function dataone_api_access($api_version) {
+  // Get the requested arguments.
+  $args = func_get_args();
+  // Remove the version.
+  $args = array_shift($args);
+  // Figure out which class to call.
+  $class = _dataone_api_version_class_name($api_version);
+
+  return $class::accessControl($args);
+}
+
+/**
+ * Handle a DataONE API request.
+ */
+function _dataone_api_request($api_version) {
+
+  // Figure out which class handles the request.
+  $class = _dataone_api_version_class_name($api_version);
+
+  // Instantiate the class.
+  $request = $class::construct();
+
+  // Get the requested arguments.
+  $api_arguments = func_get_args();
+  // Remove the version ID from array of arguments.
+  array_shift($api_arguments);
+
+  // Handle the request.
+  return $request->requestHandler($api_arguments);
+}
+
+/**
+ * Get the API implementing class for a specific version of the DataONE API.
+ *
+ * @param string $version
+ *   The version of the DataONE API
+ *
+ * @return string
+ *   The name of the class
+ */
+function _dataone_api_version_class_name($version) {
+  $versions = _dataone_api_versions();
+  return !empty($versions[$version]['class']) ? $versions[$version]['class'] : FALSE;
+}
+
+/**
+ * Get a variable for a DataONE API version.
+ *
+ * @param string $version
+ *   The version of the DataONE API
+ *
+ * @param string $variable
+ *   The variable prefix to lookup
+ *
+ * @param mixed $default_value
+ *   The variable_get() default value
+ *
+ * @return mixed
+ *   the result of variable_get()
+ */
+function _dataone_get_variable($version, $variable, $default_value = FALSE) {
+  $vars = &drupal_static(__FUNCTION__, array());
+  //Get the variable name to lookup.
+  $var_name = _dataone_get_variable_name($version, $variable);
+  //Lookup the variable.
+  if (!isset($vars[$var_name])) {
+    $vars[$var_name] = variable_get($var_name, $default_value);
+  }
+  return $vars[$var_name];
+}
+
+/**
+ * Get a variable for a DataONE API version.
+ *
+ * @param string $version
+ *   The version of the DataONE API
+ *
+ * @param string $variable
+ *   The variable prefix to lookup
+ *
+ * @return string
+ *   the variable name
+ */
+function _dataone_get_variable_name($version, $variable) {
+  return $variable . $version;
+}
+
+/**
+ * Get the defined member node identifier for this Drupal site.
+ *
+ * @param BOOL $full_identifier
+ *   Whether to get the full identifier or just the changeable identifier
+ *
+ * @return string
+ *   The Member Node identifier
+ */
+function _dataone_get_member_node_identifier($full_identifier = FALSE) {
+  $site_name = variable_get('site_name', 'Drupal');
+  $identifier = variable_get(DATAONE_VARIABLE_MEMBER_NODE_IDENTIFIER, 'urn:node:' . $site_name);
+  return $full_identifier ? 'urn:node:' . $identifier : $identifier;
+}
+
+/**
+ * Get the versioned endpoint URL of this Member Node.
+ *
+ * @param string $version
+ *   The version of the DataONE API
+ *
+ * @param BOOL $full_url
+ *   Whether to get the full URL or just the changeable endpoint
+ *
+ * @return string
+ *   The Member Node identifier
+ */
+function dataone_get_member_node_endpoint($version, $full_url = FALSE) {
+  return _dataone_get_member_node_endpoint($full_url) . '/' . $version;
+}
+
+/**
+ * Get the endpoint URL of this Member Node.
+ *
+ * @param BOOL $full_url
+ *   Whether to get the full URL or just the changeable endpoint
+ *
+ * @return string
+ *   The Member Node identifier
+ */
+function _dataone_get_member_node_endpoint($full_url = FALSE) {
+  $endpoint = variable_get(DATAONE_VARIABLE_API_ENDPOINT, 'd1/mn');
+  return $full_url ? _dataone_get_base_url() . $endpoint : $endpoint;
+}
+
+/**
+ * Get the defined member node name for this Drupal site.
+ *
+ * @return string
+ *   The Member Node name
+ */
+function _dataone_get_member_node_name() {
+  $site_name = variable_get('site_name', 'Drupal');
+  return variable_get(DATAONE_VARIABLE_API_NAME, $site_name . ' DataONE Member Node');
+}
+
+/**
+ * Get the defined member node subjects.
+ *
+ * @param BOOL $format_array
+ *   Whether to format the result as an array
+ *
+ * @return mixed
+ *   The string of subjects or array of subjects
+ */
+function _dataone_get_member_node_subjects($format_array = FALSE) {
+  $subject = variable_get(DATAONE_VARIABLE_API_SUBJECTS);
+  if ($format_array) {
+    return explode("\n", $subject);
+  }
+  return $subject;
+}
+
+/**
+ * Get the defined member node description for this Drupal site.
+ *
+ * @return string
+ *   The Member Node description
+ */
+function _dataone_get_member_node_description() {
+  return variable_get(DATAONE_VARIABLE_API_DESCRIPTION, 'A DataONE member node implemented in Drupal.');
+}
+
+/**
+ * Get the base URL of the member node.
+ *
+ * @return string
+ *   The base URL
+ */
+function _dataone_get_base_url() {
+  global $base_url;
+
+  return $base_url . '/';
+}

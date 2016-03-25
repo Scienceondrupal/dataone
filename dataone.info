@@ -1,0 +1,14 @@
+name = DataONE Member Node API
+description = Set up a Drupal site as a DataONE Member Node.
+core = 7.x
+php = 5.4
+package = DataONE
+version = 7.x-1.0
+project = dataone
+configure = admin/config/dataone/settings
+files[] = lib/DataOneApi.php
+files[] = lib/DataOneApiException.php
+files[] = lib/writers/DataOneApiXml.php
+files[] = lib/v1/DataOneApiVersionOne.php
+files[] = lib/v1/DataOneApiVersionOneException.php
+files[] = lib/v2/DataOneApiVersionTwo.php
