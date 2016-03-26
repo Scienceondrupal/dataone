@@ -57,7 +57,7 @@ function dataone_admin_settings($form, &$form_state) {
   );
   $form['main'][DATAONE_VARIABLE_API_DESCRIPTION] = array(
     '#type' => 'textfield',
-    '#title' => t('Member Node Name'),
+    '#title' => t('Member Node Description'),
     '#prefix' => t('This value will be the description for you DataONE Member Node.'),
     '#description' => t('This description is reported by your implementation of the API.'),
     '#required' => TRUE,
@@ -190,7 +190,7 @@ function _dataone_build_api_version_form_fields(&$form_element, $weight = 10){
     $form_element[$version_id]['sync']['cron'][$sync_sec] = array(
       '#type' => 'textfield',
       '#title' => t('Seconds'),
-      '#default_value' => _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_SYNC_SEC, '*'),
+      '#default_value' => _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_SYNC_SEC, '0'),
       '#size' => 3,
       '#weight' => 1,
     );
@@ -198,7 +198,7 @@ function _dataone_build_api_version_form_fields(&$form_element, $weight = 10){
     $form_element[$version_id]['sync']['cron'][$sync_min] = array(
       '#type' => 'textfield',
       '#title' => t('Minutes'),
-      '#default_value' => _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_SYNC_MIN, '*'),
+      '#default_value' => _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_SYNC_MIN, '0/3'),
       '#size' => 3,
       '#weight' => 2,
     );
@@ -230,7 +230,7 @@ function _dataone_build_api_version_form_fields(&$form_element, $weight = 10){
     $form_element[$version_id]['sync']['cron'][$sync_wday] = array(
       '#type' => 'textfield',
       '#title' => t('Day of Week'),
-      '#default_value' => _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_SYNC_WDAY, '*'),
+      '#default_value' => _dataone_get_variable(DATAONE_API_VERSION_1, DATAONE_VARIABLE_API_SYNC_WDAY, '?'),
       '#size' => 4,
       '#weight' => 6,
     );

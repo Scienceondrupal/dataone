@@ -341,7 +341,7 @@ function _dataone_get_variable_name($version, $variable) {
  */
 function _dataone_get_member_node_identifier($full_identifier = FALSE) {
   $site_name = variable_get('site_name', 'Drupal');
-  $identifier = variable_get(DATAONE_VARIABLE_MEMBER_NODE_IDENTIFIER, 'urn:node:' . $site_name);
+  $identifier = variable_get(DATAONE_VARIABLE_MEMBER_NODE_IDENTIFIER, $site_name);
   return $full_identifier ? 'urn:node:' . $identifier : $identifier;
 }
 
