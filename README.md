@@ -7,11 +7,11 @@ A Drupal module that provides a stub for implementing the DataONE Member Node AP
 
 ## Progress
 
-Alpha release for testing available at: https://github.com/Scienceondrupal/dataone/tree/release-7.x-1.0-alpha1
+Beta release for testing available at: https://github.com/Scienceondrupal/dataone/releases/tag/7.x-1.0-beta1
 
 **Status: Testing**
 
-Currently, we are testing the DataONE Member Node API Tier 1 implementation.
+Currently, we are testing the DataONE Member Node API Tier 1 implementation. There is one upcoming DataONE Member Node using the module at: https://test-prod.bco-dmo.org/d1/mn/v1
 
 **TO DO**
 
