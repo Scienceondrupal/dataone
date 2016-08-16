@@ -31,7 +31,7 @@ function dataone_admin_settings($form, &$form_state) {
     '#description' => t('This identifier is made up of only the upper and lower ASCII letters [A-Za-z] and the ASCII digits [0-9].
       This value will be used to build the official DataONE Member Node Identifier in the form of "urn:node:<identifier>".
       For example, if this field\'s value is set to "My_Drupal_Site", your Member Node Identifier will be "urn:node:My_Drupal_Site".
-      For more information, see !url.', array('!url' => l('DataONE Node Registration', DATONE_URL_NODE_REGISTRATION, array('attributes' => array('target' => '_blank'))))),
+      For more information, see !url.', array('!url' => l('DataONE Node Registration', DATAONE_URL_NODE_REGISTRATION, array('attributes' => array('target' => '_blank'))))),
     '#required' => TRUE,
     '#maxlength' => 25,
     '#default_value' => _dataone_get_member_node_identifier(),
