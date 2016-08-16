@@ -32,7 +32,7 @@ define('DATAONE_DEFAULT_CHECKSUM_ALGORITHM', 'MD5');
 define('DATAONE_CN_STAGING_ENDPOINT', '');
 define('DATAONE_CN_PRODUCTION_ENDPOINT', '');
 define('DATAONE_URL_CRON_EXPRESSION', 'https://en.wikipedia.org/wiki/Cron#CRON_expression');
-define('DATONE_URL_NODE_REGISTRATION', 'https://releases.dataone.org/online/api-documentation-v1.2.0/design/NodeIdentity.html#node-registration');
+define('DATAONE_URL_NODE_REGISTRATION', 'https://releases.dataone.org/online/api-documentation-v1.2.0/design/NodeIdentity.html#node-registration');
 define('DATAONE_API_VERSION_1', 'v1');
 define('DATAONE_API_VERSION_2', 'v2');
 define('DATAONE_API_TRUE_STRING', 'true');
