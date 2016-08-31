@@ -6,6 +6,113 @@
  */
 
 /**
+ * Register the Node's configuration.
+ *
+ * @param string $version
+ *   The version of the API to register
+ *
+ * @param BOOL $add_node
+ *   Should the request try to add or update
+ *
+ * @param $retry
+ *   If the add/update fails, try again with the opposite method
+ *
+ * @param array $results
+ *   Array of data from the resulting curl request
+ *
+ * @return array
+ *   The results array
+ */
+function dataone_register_node($version = DATAONE_API_VERSION_1, $add_node = FALSE, $retry = TRUE, &$results = array()) {
+  global $base_url;
+
+  $results[] = array();
+  end($results);
+  $key = key($results);
+
+  $ssl_cert = _dataone_get_ssl_cert_file();
+  if (!$ssl_cert || !file_exists($ssl_cert->uri)) {
+    drupal_set_message(t('No authentication SSL certificate on file'), 'error');
+    return FALSE;
+  }
+
+  $url = DATAONE_CN_REGISTER_URL;
+  $id = _dataone_get_member_node_identifier(TRUE);
+  $registration_path = dataone_get_member_node_endpoint($version);
+  $doc = $base_url . '/' . $registration_path;
+
+  $ch = curl_init();
+
+  // Auth w. SSL certification.
+  $pem = drupal_realpath($ssl_cert->uri);
+  curl_setopt($ch, CURLOPT_SSLCERT, $pem);
+
+  // Get the node description document.
+  $doc_path = system_retrieve_file($doc, 'temporary://');
+  if (!$doc_path) {
+    drupal_set_message(t('Could not save the registration document to disk: @reg', array('@reg' => $doc)), 'error');
+    return FALSE;
+  }
+  else {
+    $post_doc = array('node' => '@' . drupal_realpath($doc_path));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $post_doc);
+  }
+
+  // Submit the request.
+  if (!$add_node) {
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+    $url .= '/' . $id;
+    $results[$key]['method'] = 'PUT';
+  }
+  else {
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+    curl_setopt($ch, CURLOPT_POST, TRUE);
+    $results[$key]['method'] = 'POST';
+  }
+  curl_setopt($ch, CURLOPT_URL, $url);
+  $results[$key]['url'] = $url;
+
+  curl_setopt($ch, CURLOPT_HTTPHEADER, array("Content-Type: multipart/form-data"));
+  curl_setopt($ch, CURLOPT_HEADER, TRUE);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, TRUE);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+
+  $result = curl_exec($ch);
+  $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+  $results[$key]['response'] = array(
+    'status' => $httpcode,
+    'result' => $result,
+  );
+
+  curl_close($ch);
+
+  if ($httpcode == 400 && $retry) {
+    dataone_register_node($version, !$add_node, FALSE, $results);
+  }
+
+  return $results;
+}
+
+/**
+ * Download the previously uploaded SSL cert.
+ */
+function dataone_download_ssl_cert() {
+
+  $ssl_cert = _dataone_get_ssl_cert_file();
+  if ($ssl_cert && file_exists($ssl_cert->uri)) {
+    $headers = file_get_content_headers($ssl_cert);
+    $headers['Content-Disposition'] = 'attachment; filename="' . $ssl_cert->filename . '"';
+    file_transfer($ssl_cert->uri, $headers);
+  }
+  else {
+    drupal_not_found();
+  }
+  drupal_exit();
+}
+
+/**
  * Configuration form.
  *
  * @param array $form
@@ -31,7 +138,7 @@ function dataone_admin_settings($form, &$form_state) {
     '#description' => t('This identifier is made up of only the upper and lower ASCII letters [A-Za-z] and the ASCII digits [0-9].
       This value will be used to build the official DataONE Member Node Identifier in the form of "urn:node:<identifier>".
       For example, if this field\'s value is set to "My_Drupal_Site", your Member Node Identifier will be "urn:node:My_Drupal_Site".
-      For more information, see !url.', array('!url' => l('DataONE Node Registration', DATONE_URL_NODE_REGISTRATION, array('attributes' => array('target' => '_blank'))))),
+      For more information, see !url.', array('!url' => l('DataONE Node Registration', DATAONE_URL_NODE_REGISTRATION, array('attributes' => array('target' => '_blank'))))),
     '#required' => TRUE,
     '#maxlength' => 25,
     '#default_value' => _dataone_get_member_node_identifier(),
@@ -81,13 +188,36 @@ function dataone_admin_settings($form, &$form_state) {
     '#default_value' => variable_get(DATAONE_API_CONTACT_SUBJECT),
     '#weight' => 5,
   );
+
+  $form['main']['ssl'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('SSL Certificate'),
+    '#weight' => 6,
+  );
+  $ssl_cert = _dataone_get_ssl_cert_file();
+  $ssl_cert_desc = t('Upload the .pem certificate created by DataONE');
+  if (FALSE != $ssl_cert) {
+    $download_ssl_cert = l('Download', 'admin/config/services/dataone/ssl-cert', array('attrs' => array('target' => '_blank')));
+    $ssl_cert_desc .= t('. !file the existing certificate.', array('!file' => $download_ssl_cert));
+    $form['main']['ssl'][DATAONE_API_SSL_CERT_FILE_DELETE] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Delete the existing certificalte.'),
+      '#weight' => 1,
+    );
+  }
+  $form['main']['ssl'][DATAONE_API_SSL_CERT_FILE_UPLOAD] = array(
+    '#type' => 'file',
+    '#title' => t('DataONE SSL Certificate'),
+    '#description' => $ssl_cert_desc,
+    '#weight' => 2,
+  );
   $form['main'][DATAONE_VARIABLE_API_VERSIONS] = array(
     '#type' => 'checkboxes',
     '#title' => t('Which versions of the API will this site implement?'),
     '#description' => t('This provides flexibility as DataONE releases newer versions of their API.'),
     '#options' => _dataone_admin_version_options(),
     '#default_value' => variable_get(DATAONE_VARIABLE_API_VERSIONS, array('v1')),
-    '#weight' => 6,
+    '#weight' => 10,
   );
 
   // Include fields for each DataONE API version.
@@ -100,11 +230,49 @@ function dataone_admin_settings($form, &$form_state) {
 }
 
 /**
+ * DataONE Admin form validator.
+ */
+function dataone_admin_settings_validate($form, &$form_state) {
+
+  $dir = DATAONE_API_SSL_CERT_DIRECTORY;
+  file_prepare_directory($dir, FILE_CREATE_DIRECTORY);
+
+  $validators = array('file_validate_extensions' => array('pem'));
+  $file = file_save_upload(DATAONE_API_SSL_CERT_FILE_UPLOAD, $validators, DATAONE_API_SSL_CERT_DIRECTORY, FILE_EXISTS_REPLACE);
+  if ($file) {
+    $form_state['values'][DATAONE_API_SSL_CERT_FILE_UPLOAD] = $file;
+  }
+}
+
+/**
  * Submit handler for dataone_admin_settings().
  */
 function _dataone_admin_settings_submit($form, &$form_state) {
   // Let menu_execute_active_handler() know that a menu rebuild may be required.
   variable_set('menu_rebuild_needed', TRUE);
+
+  if (isset($form_state['values'][DATAONE_API_SSL_CERT_FILE_DELETE]) && TRUE == $form_state['values'][DATAONE_API_SSL_CERT_FILE_DELETE]) {
+    $ssl_cert = _dataone_get_ssl_cert_file();
+    if ($ssl_cert) {
+      $success = file_delete($ssl_cert , TRUE);
+      if ($success) {
+        drupal_set_message(t('Deleted the existing certificate file.'), 'status');
+      }
+      else {
+        drupal_set_message(t('Could not delete the certificate file at this time.'), 'error');
+      }
+    }
+  }
+
+  // Make the SSL Cert file permanent, if uploaded.
+  if (!empty($form_state['values'][DATAONE_API_SSL_CERT_FILE_UPLOAD])) {
+    $cert_file = $form_state['values'][DATAONE_API_SSL_CERT_FILE_UPLOAD];
+    unset($form_state['values'][DATAONE_API_SSL_CERT_FILE_UPLOAD]);
+    $cert_file->status = FILE_STATUS_PERMANENT;
+    file_save($cert_file);
+    variable_set(DATAONE_API_SSL_CERT_FILE, $cert_file->fid);
+    drupal_set_message(t('Stored the certificate file.'), 'status');
+  }
 }
 
 /**

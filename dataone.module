@@ -32,7 +32,8 @@ define('DATAONE_DEFAULT_CHECKSUM_ALGORITHM', 'MD5');
 define('DATAONE_CN_STAGING_ENDPOINT', '');
 define('DATAONE_CN_PRODUCTION_ENDPOINT', '');
 define('DATAONE_URL_CRON_EXPRESSION', 'https://en.wikipedia.org/wiki/Cron#CRON_expression');
-define('DATONE_URL_NODE_REGISTRATION', 'https://releases.dataone.org/online/api-documentation-v1.2.0/design/NodeIdentity.html#node-registration');
+define('DATAONE_URL_NODE_REGISTRATION', 'https://releases.dataone.org/online/api-documentation-v1.2.0/design/NodeIdentity.html#node-registration');
+define('DATAONE_CN_REGISTER_URL', 'https://cn-sandbox.test.dataone.org/cn/v1/node');
 define('DATAONE_API_VERSION_1', 'v1');
 define('DATAONE_API_VERSION_2', 'v2');
 define('DATAONE_API_TRUE_STRING', 'true');
@@ -43,6 +44,10 @@ define('DATAONE_API_STATUS_OFF', 'off');
 define('DATAONE_API_DATE_FORMAT_DESCRIBE_HEADER_LAST_MODIFIED', 'D, d M Y H:i:s T');
 define('DATAONE_API_DATE_FORMAT_SYS_METADATA_MODIFIED', 'Y-m-d\TH:i:s.u\Z');
 define('DATAONE_API_LOADER_FAILED', 'dataone_PID_load_fail');
+define('DATAONE_API_SSL_CERT_FILE', 'dataone_ssl_cert_file');
+define('DATAONE_API_SSL_CERT_FILE_UPLOAD', 'dataone_ssl_cert_file_upload');
+define('DATAONE_API_SSL_CERT_FILE_DELETE', 'dataone_ssl_cert_file_delete');
+define('DATAONE_API_SSL_CERT_DIRECTORY', 'private://dataone/ssl/');
 
 /**
  * Generic path loader.
@@ -110,6 +115,20 @@ function dataone_menu() {
     'page arguments' => array('dataone_admin_settings'),
     'access arguments' => array(DATAONE_PERMISSION_ADMINISTER_CONFIG),
     'type' => MENU_NORMAL_ITEM,
+    'file' => 'dataone.admin.inc',
+  );
+  $items['admin/config/services/dataone/register/%'] = array(
+    'title' => 'DataONE Registration',
+    'page callback' => 'dataone_register_node',
+    'access arguments' => array(DATAONE_PERMISSION_ADMINISTER_CONFIG),
+    'type' => MENU_CALLBACK,
+    'file' => 'dataone.admin.inc',
+  );
+  $items['admin/config/services/dataone/ssl-cert'] = array(
+    'title' => 'DataONE SSL Certificate',
+    'page callback' => 'dataone_download_ssl_cert',
+    'access arguments' => array(DATAONE_PERMISSION_ADMINISTER_CONFIG),
+    'type' => MENU_CALLBACK,
     'file' => 'dataone.admin.inc',
   );
 
@@ -328,6 +347,17 @@ function _dataone_get_variable($version, $variable, $default_value = FALSE) {
  */
 function _dataone_get_variable_name($version, $variable) {
   return $variable . $version;
+}
+
+/**
+ * Get the SSL Certificate.
+ *
+ * @return mixed
+ *
+ */
+function _dataone_get_ssl_cert_file() {
+  $fid = variable_get(DATAONE_API_SSL_CERT_FILE, FALSE);
+  return !empty($fid) ? file_load($fid) : FALSE;
 }
 
 /**
