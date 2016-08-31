@@ -8,6 +8,9 @@
 /**
  * Register the Node's configuration.
  *
+ * @param BOOL $test
+ *   Submit to the sandbox or the production coordinating node
+ *
  * @param string $version
  *   The version of the API to register
  *
@@ -23,7 +26,7 @@
  * @return array
  *   The results array
  */
-function dataone_register_node($version = DATAONE_API_VERSION_1, $add_node = FALSE, $retry = TRUE, &$results = array()) {
+function dataone_register_node($test = TRUE, $version = DATAONE_API_VERSION_1, $add_node = FALSE, $retry = TRUE, &$results = array()) {
   global $base_url;
 
   $results[] = array();
@@ -36,7 +39,7 @@ function dataone_register_node($version = DATAONE_API_VERSION_1, $add_node = FAL
     return FALSE;
   }
 
-  $url = DATAONE_CN_REGISTER_URL;
+  $url = $test ? DATAONE_CN_SANDBOX_REGISTER_URL : DATAONE_CN_PRODUCTION_REGISTER_URL;
   $id = _dataone_get_member_node_identifier(TRUE);
   $registration_path = dataone_get_member_node_endpoint($version);
   $doc = $base_url . '/' . $registration_path;
