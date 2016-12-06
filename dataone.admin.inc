@@ -5,6 +5,101 @@
  * dataone.admin.inc
  */
 
+function dataone_register_deliver($curl_results) {
+
+  if (!$curl_results) {
+    // Messaging set in dataone_register_node().
+    drupal_goto('admin/config/services/dataone/settings');
+  }
+
+  // Notify dataone_register_node() results as JSON.
+  drupal_add_http_header('Content-Type', 'application/json');
+  print drupal_json_encode($curl_results);
+  drupal_exit();
+}
+
+/**
+ * Register the Node's configuration.
+ *
+ * @param string $version
+ *   The version of the API to register
+ *
+ * @param $retry
+ *   If the add/update fails, try again with the opposite method
+ *
+ * @param array $results
+ *   Array of data from the resulting curl request
+ *
+ * @return array
+ *   The results array
+ */
+function dataone_register_node($version = DATAONE_API_VERSION_1) {
+  global $base_url;
+
+  $results = array();
+
+  $ch = curl_init();
+
+  // Auth w. SSL certificate.
+  $ssl_cert = _dataone_get_ssl_cert_file_path();
+  if (empty($ssl_cert) || !file_exists($ssl_cert)) {
+    drupal_set_message(t('Could not find the SSL certificate file at the path defined: @path', array('@path' => $ssl_cert)), 'error');
+    return FALSE;
+  }
+  curl_setopt($ch, CURLOPT_SSLCERT, $ssl_cert);
+
+  $registration_path = dataone_get_member_node_endpoint($version);
+  $doc = $base_url . '/' . $registration_path;
+  // Get the node description document.
+  $doc_path = system_retrieve_file($doc, 'temporary://');
+  if (!$doc_path) {
+    drupal_set_message(t('Could not save the registration document to disk: @reg', array('@reg' => $doc)), 'error');
+    return FALSE;
+  }
+  $post_doc = array('node' => '@' . drupal_realpath($doc_path));
+  curl_setopt($ch, CURLOPT_POSTFIELDS, $post_doc);
+
+  //DataONE CN URL.
+  $url = _dataone_get_coordinating_node_url();
+
+  // Figure out if we need to add or update the node registration.
+  $node_url = $url . '/' . _dataone_get_member_node_identifier(TRUE);
+  $response = drupal_http_request($node_url);
+  if (200 == $response->code) {
+    // Node has already been registered, so update.
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+    curl_setopt($ch, CURLOPT_URL, $node_url);
+    $results['method'] = 'PUT';
+    $results['url'] = $node_url;
+  }
+  else {
+    // Register node.
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+    curl_setopt($ch, CURLOPT_POST, TRUE);
+    curl_setopt($ch, CURLOPT_URL, $url);
+    $results['method'] = 'POST';
+    $results['url'] = $url;
+  }
+
+  curl_setopt($ch, CURLOPT_HTTPHEADER, array("Content-Type: multipart/form-data"));
+  curl_setopt($ch, CURLOPT_HEADER, TRUE);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, TRUE);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+
+  $result = curl_exec($ch);
+  $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+  $results['response'] = array(
+    'status' => $httpcode,
+    'result' => $result,
+  );
+
+  curl_close($ch);
+
+  return $results;
+}
+
 /**
  * Configuration form.
  *
@@ -31,7 +126,7 @@ function dataone_admin_settings($form, &$form_state) {
     '#description' => t('This identifier is made up of only the upper and lower ASCII letters [A-Za-z] and the ASCII digits [0-9].
       This value will be used to build the official DataONE Member Node Identifier in the form of "urn:node:<identifier>".
       For example, if this field\'s value is set to "My_Drupal_Site", your Member Node Identifier will be "urn:node:My_Drupal_Site".
-      For more information, see !url.', array('!url' => l('DataONE Node Registration', DATONE_URL_NODE_REGISTRATION, array('attributes' => array('target' => '_blank'))))),
+      For more information, see !url.', array('!url' => l('DataONE Node Registration', DATAONE_URL_NODE_REGISTRATION, array('attributes' => array('target' => '_blank'))))),
     '#required' => TRUE,
     '#maxlength' => 25,
     '#default_value' => _dataone_get_member_node_identifier(),
@@ -57,10 +152,11 @@ function dataone_admin_settings($form, &$form_state) {
   );
   $form['main'][DATAONE_VARIABLE_API_DESCRIPTION] = array(
     '#type' => 'textfield',
-    '#title' => t('Member Node Name'),
+    '#title' => t('Member Node Description'),
     '#prefix' => t('This value will be the description for you DataONE Member Node.'),
     '#description' => t('This description is reported by your implementation of the API.'),
     '#required' => TRUE,
+    '#size' => 100,
     '#default_value' => _dataone_get_member_node_description(),
     '#weight' => 3,
   );
@@ -78,8 +174,31 @@ function dataone_admin_settings($form, &$form_state) {
     '#title' => t('DataONE Contact Subject'),
     '#description' => t('The X.509 Distinguished Name of the contact person or role at your organization.'),
     '#required' => TRUE,
+    '#size' => 100,
     '#default_value' => variable_get(DATAONE_API_CONTACT_SUBJECT),
     '#weight' => 5,
+  );
+  $form['main'][DATAONE_VARIABLE_CN_ENDPOINT] = array(
+    '#type' => 'textfield',
+    '#title' => t('DataONE Coordinating Node that your Member Node should sync with'),
+    '#description' => t('The URL of the DataONE Coordinating Node (e.g. the production CN URL is:' . DATAONE_CN_PRODUCTION_ENDPOINT . ' and test is: ' . DATAONE_CN_TEST_ENDPOINT . ')'),
+    '#required' => TRUE,
+    '#default_value' => _dataone_get_coordinating_node_url(),
+    '#weight' => 6,
+  );
+  $form['main']['ssl'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('SSL Certificate'),
+    '#weight' => 7,
+  );
+  $form['main']['ssl'][DATAONE_VARIABLE_SSL_CERT_FILE_PATH] = array(
+    '#type' => 'textfield',
+    '#title' => t('Member Node PEM Certificate File Path'),
+    '#description' => t('The full pathname to the PEM certificate to use when communicating with the DataONE Coordinating Node'),
+    '#required' => FALSE,
+    '#size' => 100,
+    '#default_value' => _dataone_get_ssl_cert_file_path(),
+    '#weight' => 1,
   );
   $form['main'][DATAONE_VARIABLE_API_VERSIONS] = array(
     '#type' => 'checkboxes',
@@ -87,7 +206,7 @@ function dataone_admin_settings($form, &$form_state) {
     '#description' => t('This provides flexibility as DataONE releases newer versions of their API.'),
     '#options' => _dataone_admin_version_options(),
     '#default_value' => variable_get(DATAONE_VARIABLE_API_VERSIONS, array('v1')),
-    '#weight' => 6,
+    '#weight' => 10,
   );
 
   // Include fields for each DataONE API version.
@@ -100,11 +219,33 @@ function dataone_admin_settings($form, &$form_state) {
 }
 
 /**
+ * DataONE Admin form validator.
+ */
+function dataone_admin_settings_validate($form, &$form_state) {
+  // SSL Cert file path.
+  if (!empty($form_state['values'][DATAONE_VARIABLE_SSL_CERT_FILE_PATH]) && !file_exists($form_state['values'][DATAONE_VARIABLE_SSL_CERT_FILE_PATH])) {
+    drupal_set_message(t('The SSL Cert does not exist at @file', array('@file' => $form_state['values'][DATAONE_VARIABLE_SSL_CERT_FILE_PATH])), 'warning');
+  }
+}
+
+/**
  * Submit handler for dataone_admin_settings().
  */
 function _dataone_admin_settings_submit($form, &$form_state) {
+  global $base_url;
+
   // Let menu_execute_active_handler() know that a menu rebuild may be required.
   variable_set('menu_rebuild_needed', TRUE);
+
+  // Register updated node document.
+  drupal_set_message(t('Don\'t forget to register your changes with DataONE'), 'warning');
+  $register_url = $base_url . '/admin/config/services/dataone/register/';
+  $selected_versions =  variable_get(DATAONE_VARIABLE_API_VERSIONS);
+  foreach ($selected_versions as $version => $label) {
+    $register_version_url = $register_url . $version;
+    drupal_set_message(t('Register @ver: !url', array('@ver' => $label, '!url' => $register_version_url)), 'warning');
+  }
+
 }
 
 /**

@@ -7,6 +7,9 @@
 
 class DataOneApiXml {
 
+  // For PHP versions < 5.4, defines ENT_XML1
+  const ENT_XML1 = 16;
+
   /**
    * Start an XMLWriter.
    *
@@ -168,6 +171,6 @@ class DataOneApiXml {
    *   The prepared string
    */
   static public function prepareXMLString($string) {
-    return htmlspecialchars($string, ENT_XML1, 'UTF-8');
+    return htmlspecialchars($string, DataOneApiXml::ENT_XML1, 'UTF-8');
   }
 }
