@@ -26,11 +26,13 @@ define('DATAONE_VARIABLE_API_SYNC_YEAR', 'dataone_mn_api_sync_year_');
 define('DATAONE_VARIABLE_API_MAX_LOG_COUNT', 'dataone_mn_api_log_count_');
 define('DATAONE_VARIABLE_API_MAX_OBJECT_COUNT', 'dataone_mn_api_object_count_');
 define('DATAONE_VARIABLE_API_SYNC_FAILED_DIR', 'dataone_mn_api_sync_failed_directory_');
+define('DATAONE_VARIABLE_SSL_CERT_FILE_PATH', 'dataone_ssl_cert_file_path');
+define('DATAONE_VARIABLE_CN_ENDPOINT', 'dataone_cn_endpoint');
 define('DATAONE_DEFAULT_MAX_LOG_RECORDS', '50');
 define('DATAONE_DEFAULT_MAX_OBJECT_RECORDS', '50');
 define('DATAONE_DEFAULT_CHECKSUM_ALGORITHM', 'MD5');
-define('DATAONE_CN_STAGING_ENDPOINT', '');
-define('DATAONE_CN_PRODUCTION_ENDPOINT', '');
+define('DATAONE_CN_TEST_ENDPOINT', 'https://cn-sandbox.test.dataone.org/cn/v1/node');
+define('DATAONE_CN_PRODUCTION_ENDPOINT', 'https://cn.dataone.org/cn/v1/node');
 define('DATAONE_URL_CRON_EXPRESSION', 'https://en.wikipedia.org/wiki/Cron#CRON_expression');
 define('DATAONE_URL_NODE_REGISTRATION', 'https://releases.dataone.org/online/api-documentation-v1.2.0/design/NodeIdentity.html#node-registration');
 define('DATAONE_API_VERSION_1', 'v1');
@@ -111,6 +113,15 @@ function dataone_menu() {
     'access arguments' => array(DATAONE_PERMISSION_ADMINISTER_CONFIG),
     'type' => MENU_NORMAL_ITEM,
     'file' => 'dataone.admin.inc',
+  );
+  $items['admin/config/services/dataone/register/%'] = array(
+    'title' => 'DataONE Registration',
+    'page callback' => 'dataone_register_node',
+    'page arguments' => array(5),
+    'access arguments' => array(DATAONE_PERMISSION_ADMINISTER_CONFIG),
+    'type' => MENU_CALLBACK,
+    'file' => 'dataone.admin.inc',
+    'delivery callback' => 'dataone_register_deliver',
   );
 
   // Publish version-specific menu paths.
@@ -411,6 +422,26 @@ function _dataone_get_member_node_subjects($format_array = FALSE) {
  */
 function _dataone_get_member_node_description() {
   return variable_get(DATAONE_VARIABLE_API_DESCRIPTION, 'A DataONE member node implemented in Drupal.');
+}
+
+/**
+ * Get the defined DataONE Coordinating Node URL.
+ *
+ * @return string
+ *   The Member Node description
+ */
+function _dataone_get_coordinating_node_url() {
+  return variable_get(DATAONE_VARIABLE_CN_ENDPOINT, DATAONE_CN_PRODUCTION_ENDPOINT);
+}
+
+/**
+ * Get the full file path to the SSL certificate issued by DataONE.
+ *
+ * @return string
+ *   The file path
+ */
+function _dataone_get_ssl_cert_file_path() {
+  return variable_get(DATAONE_VARIABLE_SSL_CERT_FILE_PATH, '');
 }
 
 /**

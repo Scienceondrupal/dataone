@@ -1,9 +1,0 @@
-name = DataONE Member Node API - EXAMPLE
-description = A DataONE Member Node implementation for nodes.
-core = 7.x
-package = DataONE
-version = 7.x-1.0
-project = dataone_example
-dependencies[] = dataone
-dependencies[] = node
-files[] = lib/ExampleDataOneApiVersionOne.php

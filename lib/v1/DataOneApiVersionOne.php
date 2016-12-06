@@ -2738,7 +2738,7 @@ class DataOneApiVersionOne extends DataOneApi {
       'dcterms:identifier' => $data['metadata']['identifier'],
     );
     if (!empty($data['metadata']['description'])) {
-      $resource_map['rdf:RDF']['_resource_metadata_id']['dcterms:description'] = DataOneApiXml::prepareXMLString($pid_data['metadata']['description']);
+      $resource_map['rdf:RDF']['_resource_metadata_id']['dcterms:description'] = DataOneApiXml::prepareXMLString($data['metadata']['description']);
     }
 
     foreach($data['data'] as $idx => $data_file) {
@@ -2755,7 +2755,7 @@ class DataOneApiVersionOne extends DataOneApi {
       );
       // Add data descriptor if found.
       if (!empty($data_file['description'])) {
-        $resource_map['rdf:RDF']['_resource_data_id' . $idx]['dcterms:description'] = DataOneApiXml::prepareXMLString($data_file['description']);
+        $resource_map['rdf:RDF']['_resource_data_id_' . $idx]['dcterms:description'] = DataOneApiXml::prepareXMLString($data_file['description']);
       }
       // Add link to aggregation.
       $resource_map['rdf:RDF']['_resource_map_aggregation']['_aggregates_data' . $idx] = array(
@@ -2766,8 +2766,6 @@ class DataOneApiVersionOne extends DataOneApi {
         '_attrs' => array('rdf:resource' => $data_uri),
       );
     }
-
-
     return DataOneApiVersionOne::getXml($resource_map);
   }
 
